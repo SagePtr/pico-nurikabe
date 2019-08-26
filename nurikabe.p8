@@ -5,68 +5,68 @@ __lua__
 -- sprites --
 -------------
 
-spr_board_border=1
-spr_board_background=2
-spr_pointer=3
-spr_mark=4
-spr_fill=5
+spr_board_border = 1
+spr_board_background = 2
+spr_pointer = 3
+spr_mark = 4
+spr_fill = 5
 
 -- keys --
 ----------
 
-k_left=0
-k_right=1
-k_up=2
-k_down=3
-k_mark=4
-k_fill=5
+k_left = 0
+k_right = 1
+k_up = 2
+k_down = 3
+k_mark = 4
+k_fill = 5
 
 -- palette --
 -------------
 
-col_black=0
-col_darkblue=1
-col_lilac=2
-col_darkgreen=3
-col_brown=4
-col_grey=5
-col_lightgrey=6
-col_white=7
-col_red=8
-col_orange=9
-col_yellow=10
-col_lightgreen=11
-col_lightblue=12
-col_lightpurple=13
-col_pink=14
-col_tan=15
+col_black = 0
+col_darkblue = 1
+col_lilac = 2
+col_darkgreen = 3
+col_brown = 4
+col_grey = 5
+col_lightgrey = 6
+col_white = 7
+col_red = 8
+col_orange = 9
+col_yellow = 10
+col_lightgreen = 11
+col_lightblue = 12
+col_lightpurple = 13
+col_pink = 14
+col_tan = 15
 
 -- constants --
 ---------------
 
-debug=1
-cell_width=8
-cell_height=8
-screen_width=128
-screen_height=128
-numbers_offset=15 -- number sprites start at 16
-bg=col_lilac
+debug = 1
+cell_width = 8
+cell_height = 8
+screen_width = 128
+screen_height = 128
+numbers_offset = 15 -- number sprites start at 16
+bg = col_lilac
 
 -- globals --
 -------------
 
 actor = {}
-pointer=nil
-level=nil
-level_id=nil
-offset_x=nil
-offset_y=nil
+pointer = nil
+level = nil
+level_id = nil
+offset_x = nil
+offset_y = nil
 
-levels={}
-levels[1]={}
-levels[1]["width"]=10
-levels[1]["height"]=10
-levels[1]["numbers"]={
+levels = {}
+levels[1] = {}
+levels[1]["width"] = 10
+levels[1]["height"] = 10
+levels[1]["numbers"] = {
   {1,0,0}, {2,3,0}, {2,5,0},
   {2,8,1},
   {3,0,2}, {3,6,2},
@@ -79,8 +79,8 @@ levels[1]["numbers"]={
   {4,1,9}, {2,7,9}, {1,9,9}
 }
 
-board={}
-marks={}
+board = {}
+marks = {}
 
 -- entry point --
 -----------------
@@ -117,30 +117,30 @@ end
 -- load the given level in
 -- performs one-off calculations to set the state of the board
 function load_level(id)
-  level_id=id
-  level=levels[id]
-  marks={}
+  level_id = id
+  level = levels[id]
+  marks = {}
 
-  for x=0,level["width"]-1 do
-    marks[x]={}
-    for y=0,level["height"]-1 do
-      marks[x][y]=nil
+  for x = 0,level["width"] - 1 do
+    marks[x] = {}
+    for y = 0,level["height"] - 1 do
+      marks[x][y] = nil
     end
   end
 
-  local board_width=level["width"]*cell_width
-  local board_height=level["height"]*cell_height
+  local board_width = level["width"] * cell_width
+  local board_height = level["height"] * cell_height
 
-  offset_x=(screen_width-board_width)/2
-  offset_y=(screen_height-board_height)/2  
+  offset_x = (screen_width - board_width) / 2
+  offset_y = (screen_height - board_height) / 2
 end
 
 -- draw the level, the board and the markings
 function draw_level()
-  rectfill(0,0,127,127,bg)
+  rectfill(0, 0, 127, 127, bg)
   draw_board()
   draw_marks()
-  
+
   print("level "..tostr(level_id), 5, 5, col_white)
 end
 
@@ -153,8 +153,8 @@ function read_inputs()
   if (btnp(k_down)) pointer.y += 1 changed = true
 
   -- limit the range
-  pointer.x=clamp(pointer.x, 0, level["width"]-1)
-  pointer.y=clamp(pointer.y, 0, level["height"]-1)
+  pointer.x = clamp(pointer.x, 0, level["width"] - 1)
+  pointer.y = clamp(pointer.y, 0, level["height"] - 1)
 
   -- reset the counter so the pointer is visible
   if changed then
@@ -192,35 +192,35 @@ end
 -- draw the board, its border and the numbers
 function draw_board()
   -- draw the border
-  for x=0,level["width"]+1 do
-    spr(spr_board_border, x*8+offset_x-cell_width, 0+offset_y-cell_height)
-    spr(spr_board_border, x*8+offset_x-cell_width, 88+offset_y-cell_height)
+  for x = 0, level["width"] + 1 do
+    spr(spr_board_border, x * 8 + offset_x-cell_width, 0 + offset_y-cell_height)
+    spr(spr_board_border, x * 8 + offset_x-cell_width, 88 + offset_y-cell_height)
   end
   -- todo: use board height
-  for y=1,level["height"] do
-    spr(spr_board_border, 0+offset_x-cell_width, y*8+offset_y-cell_height)
-    spr(spr_board_border, 88+offset_x-cell_width, y*8+offset_y-cell_height)
+  for y = 1, level["height"] do
+    spr(spr_board_border, 0 + offset_x-cell_width, y * 8 + offset_y-cell_height)
+    spr(spr_board_border, 88 + offset_x-cell_width, y * 8 + offset_y-cell_height)
   end
 
   -- fill the board
-  for x=0,level["width"]-1 do
-    for y=0,level["height"]-1 do
-      spr(spr_board_background, x*cell_width+offset_x,y*cell_height+offset_y)
+  for x = 0, level["width"] - 1 do
+    for y = 0, level["height"] - 1 do
+      spr(spr_board_background, x * cell_width + offset_x, y * cell_height + offset_y)
     end
   end
 
   -- draw the numbers
   for cell in all(level["numbers"]) do
-    spr(cell[1]+numbers_offset, cell[2]*cell_width+offset_x, cell[3]*cell_width+offset_y)
+    spr(cell[1] + numbers_offset, cell[2] * cell_width + offset_x, cell[3] * cell_width + offset_y)
   end
 end
 
 -- draw the marks onto the board
 function draw_marks()
-  for x=0,level["width"]-1 do
-    for y=0,level["height"]-1 do
+  for x=0, level["width"] - 1 do
+    for y=0, level["height"] - 1 do
       if (marks[x][y]) then
-        spr(marks[x][y], x*cell_width+offset_x, y*cell_width+offset_y)
+        spr(marks[x][y], x * cell_width + offset_x, y * cell_width + offset_y)
       end
     end
   end
@@ -241,7 +241,7 @@ function make_actor(x, y)
   a.x = x
   a.y = y
 
-  add(actor,a)
+  add(actor, a)
 
   return a
 end
@@ -258,7 +258,7 @@ end
 -- helper functions --
 ----------------------
 
-function clamp(val,a,b)
+function clamp(val, a, b)
   return max(a, min(b, val))
 end
 
