@@ -87,8 +87,10 @@ marks={}
 
 function _init()
   debug_print("_init")
+  -- use dark green instead of black as the transparent colour
   palt(col_black, f)
   palt(col_darkgreen, t)
+
   pointer = make_pointer()
   load_level(1)
 end
@@ -169,10 +171,8 @@ end
 -- toggle the mark sprite in the current cell
 function toggle_mark()
   if (marks[pointer.x][pointer.y] == spr_mark) then
-    debug_print("mark: already set, unsetting")
     marks[pointer.x][pointer.y] = nil
   else
-    debug_print("mark: not set, setting")
     marks[pointer.x][pointer.y] = spr_mark
   end
 end
@@ -184,10 +184,6 @@ function toggle_fill()
   else
     marks[pointer.x][pointer.y] = spr_fill
   end
-end
-
--- return the mark for the current cell
-function find_mark()
 end
 
 -- return true if the cell can be marked
@@ -202,21 +198,13 @@ function is_writable()
 end
 
 function draw_board()
-  -- debug_print("cell width is "..tostr(cell_width))
-  -- debug_print("cell height is "..tostr(cell_height))
-  -- debug_print("total width is "..tostr(board.total_width))
-  -- debug_print("total height is "..tostr(board.total_height))
-  -- debug_print("board width is "..tostr(board.width))
-  -- debug_print("board height is "..tostr(board.height))
-  -- debug_print("board offset x = "..tostr(board.offset_x))
-  -- debug_print("offset x = "..tostr(offset_x))
-
   -- draw the border
-  for x=0,11 do
+  for x=0,level["width"]+1 do
     spr(spr_board_border, x*8+offset_x-cell_width, 0+offset_y-cell_height)
     spr(spr_board_border, x*8+offset_x-cell_width, 88+offset_y-cell_height)
   end
-  for y=1,10 do
+  -- todo: use board height
+  for y=1,level["height"] do
     spr(spr_board_border, 0+offset_x-cell_width, y*8+offset_y-cell_height)
     spr(spr_board_border, 88+offset_x-cell_width, y*8+offset_y-cell_height)
   end
@@ -243,10 +231,6 @@ function draw_marks()
     end
   end
 end
-
--- function draw_pointer()
---   spr(pointer.spr, pointer.x*cell_width+offset_x+cell_width, pointer.y*cell_height+offset_y+cell_height)
--- end
 
 function make_pointer()
   pointer = make_actor(0, 0)
