@@ -8,6 +8,8 @@ __lua__
 spr_board_border=1
 spr_board_background=2
 spr_pointer=3
+spr_mark=4
+spr_fill=5
 
 -- keys --
 ----------
@@ -16,8 +18,8 @@ k_left=0
 k_right=1
 k_up=2
 k_down=3
-k_jump=4
-k_dash=5
+k_mark=4
+k_fill=5
 
 -- palette --
 -------------
@@ -47,7 +49,7 @@ cell_width=8
 cell_height=8
 screen_width=128
 screen_height=128
-numbers_offset=15 -- Number sprites start at 16
+numbers_offset=15 -- number sprites start at 16
 bg=col_lilac
 
 -- globals --
@@ -65,19 +67,20 @@ levels[1]={}
 levels[1]["width"]=10
 levels[1]["height"]=10
 levels[1]["numbers"]={
-  {1,1,1}, {2,4,1}, {2,6,2},
-  {2,9,2},
-  {3,1,3}, {3,7,3},
-  {2,8,4},
-  {2,1,5}, {1,4,5},
-  {2,10,6},
-  {1,2,7}, {2,7,7}, {2,9,7},
-  {6,4,8},
-  {1,3,9}, {1,5,9},
-  {4,2,10}, {2,8,10}, {1,10,10}
+  {1,0,0}, {2,3,0}, {2,5,1},
+  {2,8,1},
+  {3,0,2}, {3,6,2},
+  {2,7,3},
+  {2,0,4}, {1,3,4},
+  {2,9,5},
+  {1,1,6}, {2,6,6}, {2,8,6},
+  {6,3,7},
+  {1,2,8}, {1,4,8},
+  {4,1,9}, {2,7,9}, {1,9,9}
 }
 
 board={}
+marks={}
 
 -- entry point --
 -----------------
@@ -86,7 +89,7 @@ function _init()
   debug_print("_init")
   palt(col_black, f)
   palt(col_darkgreen, t)
-  make_pointer()
+  pointer = make_pointer()
   load_level(1)
 end
 
@@ -97,9 +100,10 @@ end
 function _draw()
   cls()
   draw_level()
+
   foreach(actor,draw_actor)
 
-  -- Flip whether the point is visible every 16 frames
+  -- flip whether the point is visible every 16 frames
   pointer.counter += 1
 
   if (pointer.counter == 16) then
@@ -111,22 +115,27 @@ end
 function load_level(id)
   level_id=id
   level=levels[id]
-  board.state={}
-  board.width=level["width"]*cell_width
-  board.height=level["height"]*cell_height
-  -- add two for the width of the border
-  board.total_width=(level["width"]+2)*cell_width
-  board.total_height=(level["height"]+2)*cell_height
-  board.offset_x=(screen_width-board.total_width)/2
-  board.offset_y=(screen_height-board.total_height)/2
-  offset_x=(screen_width-board.width)/2
-  offset_y=(screen_height-board.height)/2  
+  marks={}
+
+  for x=0,level["width"]-1 do
+    marks[x]={}
+    for y=0,level["height"]-1 do
+      marks[x][y]=nil
+    end
+  end
+
+  local board_width=level["width"]*cell_width
+  local board_height=level["height"]*cell_height
+
+  offset_x=(screen_width-board_width)/2
+  offset_y=(screen_height-board_height)/2  
 end
 
 function draw_level()
   cls()
   rectfill(0,0,127,127,bg)
   draw_board()
+  draw_marks()
   
   print("level "..tostr(level_id), 5, 5, col_white)
 end
@@ -138,34 +147,71 @@ function read_inputs()
   if (btnp(k_up)) pointer.y -= 1 changed = true
   if (btnp(k_down)) pointer.y += 1 changed = true
 
-  if (btnp(k_a)) then
+  if (btnp(k_mark) and is_writable()) then
+    toggle_mark()
   end
 
-  if (btnp(k_b)) then
+  if (btnp(k_fill) and is_writable()) then
+    toggle_fill()
   end
 
-  -- Limit the range
+  -- limit the range
   pointer.x=clamp(pointer.x, 0, level["width"]-1)
   pointer.y=clamp(pointer.y, 0, level["height"]-1)
 
-  -- Reset the counter so the pointer is visible
+  -- reset the counter so the pointer is visible
   if changed then
     pointer.show = 1
     pointer.counter = 0
   end
 end
 
-function draw_board()
-  debug_print("Cell width is "..tostr(cell_width))
-  debug_print("Cell height is "..tostr(cell_height))
-  debug_print("Total width is "..tostr(board.total_width))
-  debug_print("Total height is "..tostr(board.total_height))
-  debug_print("Board width is "..tostr(board.width))
-  debug_print("Board height is "..tostr(board.height))
-  debug_print("Board offset x = "..tostr(board.offset_x))
-  debug_print("Offset x = "..tostr(offset_x))
+-- toggle the mark sprite in the current cell
+function toggle_mark()
+  if (marks[pointer.x][pointer.y] == spr_mark) then
+    debug_print("mark: already set, unsetting")
+    marks[pointer.x][pointer.y] = nil
+  else
+    debug_print("mark: not set, setting")
+    marks[pointer.x][pointer.y] = spr_mark
+  end
+end
 
-  -- Draw the border
+-- toggle the fill sprite in the current cell
+function toggle_fill()
+  if (marks[pointer.x][pointer.y] == spr_fill) then
+    marks[pointer.x][pointer.y] = nil
+  else
+    marks[pointer.x][pointer.y] = spr_fill
+  end
+end
+
+-- return the mark for the current cell
+function find_mark()
+end
+
+-- return true if the cell can be marked
+function is_writable()
+  for cell in all(level["numbers"]) do
+    if (cell[2] == pointer.x and cell[3] == pointer.y) then
+      return false
+    end
+  end
+
+  return true
+end
+
+function draw_board()
+  -- debug_print("cell width is "..tostr(cell_width))
+  -- debug_print("cell height is "..tostr(cell_height))
+  -- debug_print("total width is "..tostr(board.total_width))
+  -- debug_print("total height is "..tostr(board.total_height))
+  -- debug_print("board width is "..tostr(board.width))
+  -- debug_print("board height is "..tostr(board.height))
+  -- debug_print("board offset x = "..tostr(board.offset_x))
+  -- debug_print("offset x = "..tostr(offset_x))
+
+  -- draw the border
   for x=0,11 do
     spr(spr_board_border, x*8+offset_x-cell_width, 0+offset_y-cell_height)
     spr(spr_board_border, x*8+offset_x-cell_width, 88+offset_y-cell_height)
@@ -175,16 +221,26 @@ function draw_board()
     spr(spr_board_border, 88+offset_x-cell_width, y*8+offset_y-cell_height)
   end
 
-  -- Fill the board
+  -- fill the board
   for x=0,level["width"]-1 do
     for y=0,level["height"]-1 do
       spr(spr_board_background, x*cell_width+offset_x,y*cell_height+offset_y)
     end
   end
 
-  -- Draw the numbers
+  -- draw the numbers
   for cell in all(level["numbers"]) do
-    spr(cell[1]+numbers_offset, cell[2]*cell_width+board.offset_x, cell[3]*cell_width+board.offset_y)
+    spr(cell[1]+numbers_offset, cell[2]*cell_width+offset_x, cell[3]*cell_width+offset_y)
+  end
+end
+
+function draw_marks()
+  for x=0,level["width"]-1 do
+    for y=0,level["height"]-1 do
+      if (marks[x][y]) then
+        spr(marks[x][y], x*cell_width+offset_x, y*cell_width+offset_y)
+      end
+    end
   end
 end
 
@@ -196,6 +252,7 @@ function make_pointer()
   pointer = make_actor(0, 0)
   pointer.counter = 0
   pointer.spr = spr_pointer
+  return pointer
 end
 
 function make_actor(x, y)
@@ -229,14 +286,14 @@ function debug_print(msg)
 end
 
 __gfx__
-77777777666666656666666937777773333333330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-7777777765d5d5d56f7f7f7973333337333333330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-777777776d5d5d5567f7f7f973333337335555330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-7777777765d5d5d56f7f7f7973333337335555330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-777777776d5d5d5567f7f7f973333337335555330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-7777777765d5d5d56f7f7f7973333337335555330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-777777776d5d5d5567f7f7f973333337333333330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-77777777555555559999999937777773333333330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77777777666666656666666937777773333333333333333300000000000000000000000000000000000000000000000000000000000000000000000000000000
+7777777765d5d5d56f7f7f7973333337333333333555555300000000000000000000000000000000000000000000000000000000000000000000000000000000
+777777776d5d5d5567f7f7f973333337333333333555555300000000000000000000000000000000000000000000000000000000000000000000000000000000
+7777777765d5d5d56f7f7f7973333337333553333555555300000000000000000000000000000000000000000000000000000000000000000000000000000000
+777777776d5d5d5567f7f7f973333337333553333555555300000000000000000000000000000000000000000000000000000000000000000000000000000000
+7777777765d5d5d56f7f7f7973333337333333333555555300000000000000000000000000000000000000000000000000000000000000000000000000000000
+777777776d5d5d5567f7f7f973333337333333333555555300000000000000000000000000000000000000000000000000000000000000000000000000000000
+77777777555555559999999937777773333333333333333300000000000000000000000000000000000000000000000000000000000000000000000000000000
 33333333333333333333333333333333333333333333333333333333333333333333333333333333000000000000000000000000000000000000000000000000
 33003333333003333330033333033033330000333330033333000033333003333330033330033033000000000000000000000000000000000000000000000000
 33303333330330333303303333033033330333333303333333333033330330333303303333030303000000000000000000000000000000000000000000000000
