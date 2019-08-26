@@ -114,6 +114,8 @@ function _draw()
   end
 end
 
+-- load the given level in
+-- performs one-off calculations to set the state of the board
 function load_level(id)
   level_id=id
   level=levels[id]
@@ -133,8 +135,8 @@ function load_level(id)
   offset_y=(screen_height-board_height)/2  
 end
 
+-- draw the level, the board and the markings
 function draw_level()
-  cls()
   rectfill(0,0,127,127,bg)
   draw_board()
   draw_marks()
@@ -142,20 +144,13 @@ function draw_level()
   print("level "..tostr(level_id), 5, 5, col_white)
 end
 
+-- read the cursor inputs
 function read_inputs()
   local changed = false
   if (btnp(k_left)) pointer.x -= 1 changed = true
   if (btnp(k_right)) pointer.x += 1 changed = true
   if (btnp(k_up)) pointer.y -= 1 changed = true
   if (btnp(k_down)) pointer.y += 1 changed = true
-
-  if (btnp(k_mark) and is_writable()) then
-    toggle_mark()
-  end
-
-  if (btnp(k_fill) and is_writable()) then
-    toggle_fill()
-  end
 
   -- limit the range
   pointer.x=clamp(pointer.x, 0, level["width"]-1)
@@ -166,23 +161,20 @@ function read_inputs()
     pointer.show = 1
     pointer.counter = 0
   end
-end
 
--- toggle the mark sprite in the current cell
-function toggle_mark()
-  if (marks[pointer.x][pointer.y] == spr_mark) then
-    marks[pointer.x][pointer.y] = nil
-  else
-    marks[pointer.x][pointer.y] = spr_mark
+  if (btnp(k_mark) and is_writable()) then
+    toggle_mark(spr_mark)
+  elseif (btnp(k_fill) and is_writable()) then
+    toggle_mark(spr_fill)
   end
 end
 
--- toggle the fill sprite in the current cell
-function toggle_fill()
-  if (marks[pointer.x][pointer.y] == spr_fill) then
+-- toggle the given sprite in the current cell
+function toggle_mark(sprite)
+  if (marks[pointer.x][pointer.y] == sprite) then
     marks[pointer.x][pointer.y] = nil
   else
-    marks[pointer.x][pointer.y] = spr_fill
+    marks[pointer.x][pointer.y] = sprite
   end
 end
 
@@ -197,6 +189,7 @@ function is_writable()
   return true
 end
 
+-- draw the board, its border and the numbers
 function draw_board()
   -- draw the border
   for x=0,level["width"]+1 do
@@ -222,6 +215,7 @@ function draw_board()
   end
 end
 
+-- draw the marks onto the board
 function draw_marks()
   for x=0,level["width"]-1 do
     for y=0,level["height"]-1 do
@@ -232,6 +226,7 @@ function draw_marks()
   end
 end
 
+-- return a new pointer entity
 function make_pointer()
   pointer = make_actor(0, 0)
   pointer.counter = 0
@@ -239,6 +234,7 @@ function make_pointer()
   return pointer
 end
 
+-- return a new actor entity
 function make_actor(x, y)
   a = {}
   a.show = 0
@@ -250,9 +246,7 @@ function make_actor(x, y)
   return a
 end
 
--- helper functions --
-----------------------
-
+-- draw the given actor
 function draw_actor(a)
   if (a.show == 1) then
     local sx = a.x * cell_width + offset_x
@@ -260,6 +254,9 @@ function draw_actor(a)
     spr(a.spr, sx, sy)
   end
 end
+
+-- helper functions --
+----------------------
 
 function clamp(val,a,b)
   return max(a, min(b, val))
