@@ -63,6 +63,10 @@ level = nil
 level_id = nil
 offset_x = nil
 offset_y = nil
+board_offset_x = nil
+board_offset_y = nil
+map_screen_x = nil
+map_screen_y = nil
 
 levels = {}
 levels[1] = {}
@@ -135,6 +139,10 @@ function load_level(id)
 
   offset_x = (screen_width - board_width) / 2
   offset_y = (screen_height - board_height) / 2
+  board_offset_x = offset_x - border_width
+  board_offset_y = offset_y - border_height
+  map_screen_x = level["width"] + 2
+  map_screen_y = level["height"] + 2
 
   build_board()
 end
@@ -162,7 +170,7 @@ end
 -- draw the level, the board and the markings
 function draw_level()
   rectfill(0, 0, 127, 127, bg)
-  map(0, 0, offset_x - border_width, offset_y - border_height, 12, 12)
+  map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
   draw_numbers()
   draw_marks()
 
