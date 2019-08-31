@@ -18,8 +18,8 @@ k_left = 0
 k_right = 1
 k_up = 2
 k_down = 3
-k_mark = 4
-k_fill = 5
+k_a = 4
+k_b = 5
 
 -- palette --
 -------------
@@ -195,19 +195,17 @@ function read_inputs()
     pointer.counter = 0
   end
 
-  if (btnp(k_mark) and is_writable()) then
-    toggle_mark(spr_mark)
-  elseif (btnp(k_fill) and is_writable()) then
-    toggle_mark(spr_fill)
-  end
+  if (btnp(k_a) and is_writable()) cycle_mark()
 end
 
--- toggle the given sprite in the current cell
-function toggle_mark(sprite)
-  if (marks[pointer.x][pointer.y] == sprite) then
-    marks[pointer.x][pointer.y] = nil
+-- cycle the mark the current cell
+function cycle_mark()
+  if (marks[pointer.x][pointer.y] == nil) then
+    marks[pointer.x][pointer.y] = spr_fill
+  elseif (marks[pointer.x][pointer.y] == spr_fill) then
+    marks[pointer.x][pointer.y] = spr_mark
   else
-    marks[pointer.x][pointer.y] = sprite
+    marks[pointer.x][pointer.y] = nil
   end
 end
 
