@@ -165,7 +165,6 @@ end
 -- initialise the level menu items
 function init_menu()
   menuitem(1, "check solution", check_solution)
-  menuitem(2, "continue", function () mode = mode_level end)
 
   if debug == 1 then menuitem(3, "show solution", load_solution) end
 end
