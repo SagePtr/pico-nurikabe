@@ -18,8 +18,8 @@ k_left = 0
 k_right = 1
 k_up = 2
 k_down = 3
-k_a = 4
-k_b = 5
+k_mark = 4
+k_fill = 5
 
 -- palette --
 -------------
@@ -118,8 +118,8 @@ function _init()
   pointer = make_pointer()
   load_level(1)
 
-  load_solution()
-  check_solution()
+  -- load_solution()
+  -- check_solution()
 end
 
 function _update()
@@ -249,10 +249,8 @@ end
 -- count the number of clear cells starting at the given co-ordinates
 -- return the count
 function check_island_cell(x, y)
-  local count = 0
-
   if (is_cell_valid(x, y) == false or is_cell_checked(x, y) == true or is_cell_filled(x, y) == true) then
-    return count
+    return 0
   end
 
   mark_cell_checked(x, y)
@@ -262,10 +260,10 @@ function check_island_cell(x, y)
   if (is_cell_number(x, y)) then
     debug_print("***hit another island***")
     is_island_connected = true
-    return count
+    return 0
   end
 
-  if (is_cell_clear(x, y)) count += 1
+  local count = 1
 
   count += check_island_cell(x, y - 1)
   count += check_island_cell(x + 1, y)
@@ -284,35 +282,86 @@ function check_sea()
   checked_cells = {}
   pool_count = 0
   sea_marks = {}
+  sea_mark_count = 0
 
   for x = 0,level["width"] - 1 do
     for y = 0,level["height"] - 1 do
-      if (marks[x][y] == spr_fill) add(sea_marks, {x, y})
+      if (marks[x][y] == spr_fill) then
+        add(sea_marks, {x, y})
+        sea_mark_count += 1
+      end
     end
   end
 
-  debug_print("counted "..tostr(#sea_marks).." filled cells")
+  debug_print("counted "..tostr(sea_mark_count).." filled cells")
 
-  for k, v in pairs(sea_marks) do
-    check_sea_mark(k, v[1], v[2])
-  end
-end
-
-function check_sea_mark(idx, x, y)
-  if checked_indexes[idx] then
-    debug_print("already checked "..tostr(idx))
+  if sea_mark_count == 0 then
+    debug_print("no marks")
+    is_correct = false
     return
   end
 
-  debug_print("checking pool "..idx.." at "..x..","..y)
-  checked_indexes[idx] = true
+  debug_print("first mark is "..sea_marks[1][1]..","..sea_marks[1][2])
+  debug_print("checking first mark is connected to the rest")
+
+  local count = count_pool(sea_marks[1][1], sea_marks[1][2])
+
+  debug_print("mark contains "..tostr(count).." cells")
+
+  if count ~= sea_mark_count then
+    is_correct = false
+  end
+
+  debug_print("checking marks do not contain regions of 2x2 or greater")
+
+  for sea_mark in all(sea_marks) do
+    check_size(sea_mark[1], sea_mark[2])
+  end
+end
+
+-- count the number of filled cells starting at the given co-ordinates
+-- return the count
+function count_pool(x, y)
+  local count = 1
 
   mark_cell_checked(x, y)
 
-  -- check above
-  -- check right
-  -- check below
-  -- check left
+  count += check_pool_cell(x, y - 1)
+  count += check_pool_cell(x + 1, y)
+  count += check_pool_cell(x, y + 1)
+  count += check_pool_cell(x - 1, y)
+
+  return count
+end
+
+-- count the number of filled cells starting at the given co-ordinates
+-- return the count
+function check_pool_cell(x, y)
+  if (is_cell_valid(x, y) == false or is_cell_checked(x, y) == true or is_cell_filled(x, y) == false) then
+    return 0
+  end
+
+  mark_cell_checked(x, y)
+
+  local count = 1
+
+  count += check_pool_cell(x, y - 1)
+  count += check_pool_cell(x + 1, y)
+  count += check_pool_cell(x, y + 1)
+  count += check_pool_cell(x - 1, y)
+
+  return count
+end
+
+-- check the co-ordinate is not 2x2 or greater
+function check_size(x, y)
+  if (is_cell_valid_and_filled(x + 1, y)
+      and is_cell_valid_and_filled(x, y + 1)
+      and is_cell_valid_and_filled(x + 1, y + 1))
+  then
+    debug_print("found 2x2 at "..tostr(x)..","..tostr(y))
+    is_correct = false
+  end
 end
 
 -- mark a cell as checked
@@ -355,6 +404,10 @@ end
 -- return true if the co-ordinates have been filled
 function is_cell_filled(x, y)
   return marks[x][y] == spr_fill
+end
+
+function is_cell_valid_and_filled(x, y)
+  return is_cell_valid(x, y) and is_cell_filled(x, y)
 end
 
 -- build the board in the map
@@ -413,17 +466,19 @@ function read_inputs()
     pointer.counter = 0
   end
 
-  if (btnp(k_a) and is_writable()) cycle_mark()
+  if (btnp(k_mark) and is_writable()) then
+    toggle_mark(spr_mark)
+  elseif (btnp(k_fill) and is_writable()) then
+    toggle_mark(spr_fill)
+  end
 end
 
--- cycle the mark the current cell
-function cycle_mark()
-  if (marks[pointer.x][pointer.y] == nil) then
-    marks[pointer.x][pointer.y] = spr_fill
-  elseif (marks[pointer.x][pointer.y] == spr_fill) then
-    marks[pointer.x][pointer.y] = spr_mark
-  else
+-- toggle the sprite in the current cell
+function toggle_mark(sprite)
+  if (marks[pointer.x][pointer.y] == sprite) then
     marks[pointer.x][pointer.y] = nil
+  else
+    marks[pointer.x][pointer.y] = sprite
   end
 end
 
@@ -482,10 +537,12 @@ end
 -- helper functions --
 ----------------------
 
+-- restrict the value to the given range
 function clamp(val, a, b)
   return max(a, min(b, val))
 end
 
+-- print the message when debugging
 function debug_print(msg)
   if (debug == 1) printh(msg)
 end
