@@ -61,6 +61,7 @@ actor = {}
 pointer = nil
 level = nil
 level_id = nil
+level_size = nil
 offset_x = nil
 offset_y = nil
 board_offset_x = nil
@@ -137,12 +138,12 @@ end
 function load_level(id)
   level_id = id
   level = levels[id]
+  level_size = coord_to_index(level["width"] - 1, level["height"] - 1)
   marks = {}
 
   for x = 0, level["width"] - 1 do
-    marks[x] = {}
     for y = 0, level["height"] - 1 do
-      marks[x][y] = nil
+      marks[coord_to_index(x, y)] = nil
     end
   end
 
@@ -173,14 +174,13 @@ function load_solution()
   marks = {}
 
   for x = 0,level["width"] - 1 do
-    marks[x] = {}
     for y = 0,level["height"] - 1 do
-      marks[x][y] = nil
+      marks[coord_to_index(x, y)] = nil
     end
   end
 
   for cell in all(level["solution"]) do
-    marks[cell[1]][cell[2]] = spr_fill
+    marks[coord_to_index(cell[1], cell[2])] = spr_fill
   end
 end
 
@@ -285,7 +285,7 @@ function check_sea()
 
   for x = 0,level["width"] - 1 do
     for y = 0,level["height"] - 1 do
-      if (marks[x][y] == spr_fill) then
+      if (is_cell_filled(x, y)) then
         add(sea_marks, {x, y})
         sea_mark_count += 1
       end
@@ -365,29 +365,19 @@ end
 
 -- mark a cell as checked
 function mark_cell_checked(x, y)
-  if (checked_cells[x] == nil) checked_cells[x] = {}
-  checked_cells[x][y] = true
+  checked_cells[coord_to_index(x, y)] = true
 end
 
 -- return true if the cell has already been checked
 function is_cell_checked(x, y)
-  if (checked_cells[x] ~= nil and checked_cells[x][y] ~= nil) then
-    return true
-  end
-
-  return false
-end
-
--- return true if the cell is clear or marked as clear
-function is_cell_clear(x, y)
-  if (marks[x][y] == nil or marks[x][y] == spr_mark) return true
-  return false
+  return checked_cells[coord_to_index(x, y)] == true
 end
 
 -- return true if the co-ordinates are within the level boundary
 function is_cell_valid(x, y)
-  if (x >= 0 and y >=0 and x < level["width"] and y < level["height"]) return true
-  return false
+  local idx = coord_to_index(x, y)
+
+  return idx >= 0 and idx <= level_size
 end
 
 -- return true if the co-ordinates are a number
@@ -402,9 +392,10 @@ end
 
 -- return true if the co-ordinates have been filled
 function is_cell_filled(x, y)
-  return marks[x][y] == spr_fill
+  return marks[coord_to_index(x, y)] == spr_fill
 end
 
+-- return true if the co-ordinates are valid and have been filled
 function is_cell_valid_and_filled(x, y)
   return is_cell_valid(x, y) and is_cell_filled(x, y)
 end
@@ -474,10 +465,12 @@ end
 
 -- toggle the sprite in the current cell
 function toggle_mark(sprite)
-  if (marks[pointer.x][pointer.y] == sprite) then
-    marks[pointer.x][pointer.y] = nil
+  local idx = coord_to_index(pointer.x, pointer.y)
+
+  if (marks[idx] == sprite) then
+    marks[idx] = nil
   else
-    marks[pointer.x][pointer.y] = sprite
+    marks[idx] = sprite
   end
 end
 
@@ -495,10 +488,14 @@ end
 
 -- draw the marks onto the board
 function draw_marks()
-  for x=0, level["width"] - 1 do
-    for y=0, level["height"] - 1 do
-      if (marks[x][y]) then
-        spr(marks[x][y], x * cell_width + offset_x, y * cell_width + offset_y)
+  local idx = nil
+
+  for x = 0, level["width"] - 1 do
+    for y = 0, level["height"] - 1 do
+      idx = coord_to_index(x, y)
+
+      if (marks[idx]) then
+        spr(marks[idx], x * cell_width + offset_x, y * cell_width + offset_y)
       end
     end
   end
