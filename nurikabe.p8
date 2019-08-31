@@ -99,10 +99,12 @@ levels[1]["solution"] = {
 
 board = {}
 marks = {}
-checked_islands = {}
+checked_indexes = {}
 checked_cells = {}
 is_island_connected = false
 is_correct = false
+pool_count = 0
+sea_marks = {}
 
 -- entry point --
 -----------------
@@ -116,8 +118,8 @@ function _init()
   pointer = make_pointer()
   load_level(1)
 
-  -- load_solution()
-  -- check_solution()
+  load_solution()
+  check_solution()
 end
 
 function _update()
@@ -138,9 +140,9 @@ function load_level(id)
   level = levels[id]
   marks = {}
 
-  for x = 0,level["width"] - 1 do
+  for x = 0, level["width"] - 1 do
     marks[x] = {}
-    for y = 0,level["height"] - 1 do
+    for y = 0, level["height"] - 1 do
       marks[x][y] = nil
     end
   end
@@ -168,23 +170,7 @@ function init_menu()
   if debug == 1 then menuitem(3, "show solution", load_solution) end
 end
 
--- check whether the current solution is correct
-function check_solution()
-  -- reset the variables we'll use to check the solution
-  is_correct = true
-  checked_islands = {}
-  checked_cells = {}
-
-  check_islands()
-  check_sea()
-
-  if is_correct then
-    debug_print("solution is correct")
-  else
-    debug_print("solution is not correct")
-  end
-end
-
+-- load the solution to the current level in
 function load_solution()
   marks = {}
 
@@ -200,9 +186,27 @@ function load_solution()
   end
 end
 
+-- check whether the current solution is correct
+function check_solution()
+  is_correct = true
+
+  check_islands()
+  check_sea()
+
+  if is_correct then
+    debug_print("solution is correct")
+  else
+    debug_print("solution is not correct")
+  end
+end
+
 -- check each island contains the required number of cells and does
 -- not connect to any other islands
 function check_islands()
+  -- reset the variables we'll use to check the solution
+  checked_indexes = {}
+  checked_cells = {}
+
   for k,v in pairs(level["islands"]) do
     check_island(k, v[1], v[2], v[3])
   end
@@ -211,7 +215,7 @@ end
 -- check the island has the required number of cells
 function check_island(idx, count, x, y)
   -- skip islands that we've already hit in earlier checks
-  if checked_islands[idx] then
+  if checked_indexes[idx] then
     debug_print("already checked "..tostr(idx))
     return
   end
@@ -222,12 +226,12 @@ function check_island(idx, count, x, y)
   is_island_connected = false
 
   mark_cell_checked(x, y)
-  checked_islands[idx] = true
+  checked_indexes[idx] = true
 
-  actual_count += check_cell(x, y - 1)
-  actual_count += check_cell(x + 1, y)
-  actual_count += check_cell(x, y + 1)
-  actual_count += check_cell(x - 1, y)
+  actual_count += check_island_cell(x, y - 1)
+  actual_count += check_island_cell(x + 1, y)
+  actual_count += check_island_cell(x, y + 1)
+  actual_count += check_island_cell(x - 1, y)
 
   debug_print("count was "..tostr(actual_count)..", should be "..tostr(count))
 
@@ -244,7 +248,7 @@ end
 
 -- count the number of clear cells starting at the given co-ordinates
 -- return the count
-function check_cell(x, y)
+function check_island_cell(x, y)
   local count = 0
 
   if (is_cell_valid(x, y) == false or is_cell_checked(x, y) == true or is_cell_filled(x, y) == true) then
@@ -253,7 +257,7 @@ function check_cell(x, y)
 
   mark_cell_checked(x, y)
 
-  debug_print("checking cell "..tostr(x)..","..tostr(y))
+  debug_print("checking island cell "..tostr(x)..","..tostr(y))
 
   if (is_cell_number(x, y)) then
     debug_print("***hit another island***")
@@ -263,10 +267,10 @@ function check_cell(x, y)
 
   if (is_cell_clear(x, y)) count += 1
 
-  count += check_cell(x, y - 1)
-  count += check_cell(x + 1, y)
-  count += check_cell(x, y + 1)
-  count += check_cell(x - 1, y)
+  count += check_island_cell(x, y - 1)
+  count += check_island_cell(x + 1, y)
+  count += check_island_cell(x, y + 1)
+  count += check_island_cell(x - 1, y)
 
   return count
 end
@@ -275,7 +279,40 @@ end
 -- 1. part of a single contiguous area
 -- 2. do not contain any regions of 2x2 or greater
 function check_sea()
-  -- todo
+  -- reset the variables we'll use to check the solution
+  checked_indexes = {}
+  checked_cells = {}
+  pool_count = 0
+  sea_marks = {}
+
+  for x = 0,level["width"] - 1 do
+    for y = 0,level["height"] - 1 do
+      if (marks[x][y] == spr_fill) add(sea_marks, {x, y})
+    end
+  end
+
+  debug_print("counted "..tostr(#sea_marks).." filled cells")
+
+  for k, v in pairs(sea_marks) do
+    check_sea_mark(k, v[1], v[2])
+  end
+end
+
+function check_sea_mark(idx, x, y)
+  if checked_indexes[idx] then
+    debug_print("already checked "..tostr(idx))
+    return
+  end
+
+  debug_print("checking pool "..idx.." at "..x..","..y)
+  checked_indexes[idx] = true
+
+  mark_cell_checked(x, y)
+
+  -- check above
+  -- check right
+  -- check below
+  -- check left
 end
 
 -- mark a cell as checked
