@@ -110,6 +110,7 @@ board = {}
 marks = {}
 checked_indexes = {}
 checked_cells = {}
+error_indexes = {}
 is_island_connected = false
 is_correct = false
 pool_count = 0
@@ -212,6 +213,7 @@ function check_islands()
   -- reset the variables we'll use to check the solution
   checked_indexes = {}
   checked_cells = {}
+  error_indexes = {}
 
   for k,v in pairs(level["islands"]) do
     check_island(k, v[1], v[2], v[3])
@@ -239,11 +241,10 @@ function check_island(idx, count, x, y)
   actual_count += check_island_cell(x, y + 1)
   actual_count += check_island_cell(x - 1, y)
 
-  debug_print("count was "..tostr(actual_count)..", should be "..tostr(count))
-
   if actual_count ~= count then
     debug_print("count was "..tostr(actual_count)..", should be "..tostr(count))
     is_correct = false
+    flag_cell_as_error(x, y)
   end
 
   if is_island_connected then
@@ -261,11 +262,12 @@ function check_island_cell(x, y)
 
   mark_cell_checked(x, y)
 
-  debug_print("checking island cell "..tostr(x)..","..tostr(y))
+  -- debug_print("checking island cell "..tostr(x)..","..tostr(y))
 
   if (is_cell_number(x, y)) then
     debug_print("***hit another island***")
     is_island_connected = true
+    flag_cell_as_error(x, y)
     return 0
   end
 
@@ -408,6 +410,12 @@ function is_cell_valid_and_filled(x, y)
   return is_cell_valid(x, y) and is_cell_filled(x, y)
 end
 
+-- flag the co-ordinates as having an error
+function flag_cell_as_error(x, y)
+  debug_print("flagging "..tostr(x)..","..tostr(y).." as error")
+  error_indexes[coord_to_index(x, y)] = true
+end
+
 -- build the board in the map
 function build_board()
   -- draw the border
@@ -496,8 +504,19 @@ end
 -- draw the numbers on the board
 function draw_numbers()
   for cell in all(level["islands"]) do
-    spr(cell[1] + numbers_offset, cell[2] * cell_width + offset_x, cell[3] * cell_width + offset_y)
+    local sprite = cell[1] + numbers_offset
+
+    if cell_has_error(cell[2], cell[3]) then
+      sprite += 16
+    end
+
+    spr(sprite, cell[2] * cell_width + offset_x, cell[3] * cell_width + offset_y)
   end
+end
+
+-- return true if the co-ordinates have an error
+function cell_has_error(x, y)
+  return error_indexes[coord_to_index(x, y)]
 end
 
 -- draw the marks onto the board
