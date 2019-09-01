@@ -82,16 +82,25 @@ levels[1] = {}
 levels[1]["width"] = 10
 levels[1]["height"] = 10
 levels[1]["islands"] = {
-  {1,0,0}, {2,3,0}, {2,5,0},
-  {2,8,1},
-  {3,0,2}, {3,6,2},
-  {2,7,3},
-  {2,0,4}, {1,3,4},
-  {2,9,5},
-  {1,1,6}, {2,6,6}, {2,8,6},
-  {6,3,7},
-  {1,2,8}, {1,4,8},
-  {4,1,9}, {2,7,9}, {1,9,9}
+  0, 1,
+  2, 2,
+  1, 2,
+  12, 2,
+  1, 3,
+  5, 3,
+  10, 2,
+  2, 2,
+  2, 1,
+  15, 2,
+  1, 1,
+  4, 2,
+  1, 2,
+  4, 6,
+  8, 1,
+  1, 1,
+  6, 4,
+  5, 2,
+  1, 1
 }
 levels[1]["solution"] = {
   {1, 0}, {4, 0}, {7, 0}, {8, 0}, {9, 0},
@@ -147,6 +156,7 @@ end
 function load_level(id)
   level_id = id
   level = levels[id]
+  level["islands"] = decompress_islands(level["islands"])
   level_size = coord_to_index(level["width"] - 1, level["height"] - 1)
   marks = {}
 
@@ -169,6 +179,28 @@ function load_level(id)
   build_board()
   init_menu()
   mode = mode_level
+end
+
+-- load the islands from the run-length encoded data
+function decompress_islands(data)
+  local idx = 0
+  local coord = nil
+  local count = nil
+  local value = nil
+  local islands = {}
+
+  for i = 1, #data / 2 do
+    count = data[i * 2 - 1]
+    value = data[i * 2]
+
+    idx += count
+    coord = index_to_coord(idx)
+    idx += 1
+
+    add(islands, {value, coord[1], coord[2]})
+  end
+
+  return islands
 end
 
 -- initialise the level menu items
