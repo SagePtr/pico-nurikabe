@@ -77,51 +77,31 @@ board_offset_y = nil
 map_screen_x = nil
 map_screen_y = nil
 
-levels = {}
-levels[1] = {}
-levels[1]["width"] = 10
-levels[1]["height"] = 10
-levels[1]["islands"] = {
-  0, 1,
-  2, 2,
-  1, 2,
-  12, 2,
-  1, 3,
-  5, 3,
-  10, 2,
-  2, 2,
-  2, 1,
-  15, 2,
-  1, 1,
-  4, 2,
-  1, 2,
-  4, 6,
-  8, 1,
-  1, 1,
-  6, 4,
-  5, 2,
-  1, 1
-}
-levels[1]["solution"] = {
-  {1, 0}, {4, 0}, {7, 0}, {8, 0}, {9, 0},
-  {0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}, {7, 1}, {9, 1},
-  {3, 2}, {7, 2}, {9, 2},
-  {0, 3}, {1, 3}, {2, 3}, {3, 3}, {4, 3}, {5, 3}, {6, 3}, {8, 3}, {9, 3},
-  {2, 4}, {4, 4}, {6, 4}, {8, 4},
-  {0, 5}, {1, 5}, {2, 5}, {3, 5}, {6, 5}, {7, 5}, {8, 5},
-  {0, 6}, {2, 6}, {5, 6}, {7, 6}, {9, 6},
-  {1, 7}, {2, 7}, {4, 7}, {5, 7}, {7, 7}, {9, 7},
-  {1, 8}, {3, 8}, {5, 8}, {6, 8}, {7, 8}, {8, 8}, {9, 8},
-  {2, 9}, {3, 9}, {4, 9}, {5, 9}, {8, 9}
+levels = {
+  {
+    width = 10,
+    height = 10,
+    islands = {0, 1, 2, 2, 1, 2, 12, 2, 1, 3, 5, 3, 10, 2, 2, 2, 2, 1, 15, 2, 1, 1, 4, 2, 1, 2, 4, 6, 8, 1, 1, 1, 6, 4, 5, 2, 1, 1},
+    solution = {
+      {1, 0}, {4, 0}, {7, 0}, {8, 0}, {9, 0},
+      {0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}, {7, 1}, {9, 1},
+      {3, 2}, {7, 2}, {9, 2},
+      {0, 3}, {1, 3}, {2, 3}, {3, 3}, {4, 3}, {5, 3}, {6, 3}, {8, 3}, {9, 3},
+      {2, 4}, {4, 4}, {6, 4}, {8, 4},
+      {0, 5}, {1, 5}, {2, 5}, {3, 5}, {6, 5}, {7, 5}, {8, 5},
+      {0, 6}, {2, 6}, {5, 6}, {7, 6}, {9, 6},
+      {1, 7}, {2, 7}, {4, 7}, {5, 7}, {7, 7}, {9, 7},
+      {1, 8}, {3, 8}, {5, 8}, {6, 8}, {7, 8}, {8, 8}, {9, 8},
+      {2, 9}, {3, 9}, {4, 9}, {5, 9}, {8, 9}
+    }
+  }
 }
 
-board = {}
 marks = {}
 checked_cells = {}
-error_indexes = {}
+error_cells = {}
 is_island_connected = false
 is_correct = false
-pool_count = 0
 
 -- entry point --
 -----------------
@@ -183,7 +163,7 @@ end
 -- load the islands from the run-length encoded data
 function decompress_islands(data)
   local idx = 0
-  local coord = nil
+  local x, y = nil, nil
   local count = nil
   local value = nil
   local islands = {}
@@ -193,10 +173,10 @@ function decompress_islands(data)
     value = data[i * 2]
 
     idx += count
-    coord = index_to_coord(idx)
+    x, y = index_to_coord(idx)
     idx += 1
 
-    add(islands, {value, coord[1], coord[2]})
+    add(islands, {value, x, y})
   end
 
   return islands
@@ -226,7 +206,7 @@ end
 
 -- check whether the current solution is correct
 function check_solution()
-  error_indexes = {}
+  error_cells = {}
   is_correct = true
 
   check_islands()
@@ -265,7 +245,7 @@ function check_island(idx, count, x, y)
   if actual_count ~= count then
     debug_print("count was "..tostr(actual_count)..", should be "..tostr(count))
     is_correct = false
-    flag_cell_as_error(x, y)
+    mark_cell_error(x, y)
   end
 
   if is_island_connected then
@@ -288,7 +268,7 @@ function check_island_cell(x, y)
   if (is_cell_number(x, y)) then
     debug_print("***hit another island***")
     is_island_connected = true
-    flag_cell_as_error(x, y)
+    mark_cell_error(x, y)
     return 0
   end
 
@@ -308,7 +288,6 @@ end
 function check_sea()
   -- reset the variables we'll use to check the solution
   checked_cells = {}
-  pool_count = 0
   sea_mark_count = 0
 
   local sea_marks = {}
@@ -391,10 +370,10 @@ function check_size(x, y)
     debug_print("found 2x2 at "..tostr(x)..","..tostr(y))
     is_correct = false
 
-    flag_cell_as_error(x, y)
-    flag_cell_as_error(x + 1, y)
-    flag_cell_as_error(x, y + 1)
-    flag_cell_as_error(x + 1, y + 1)
+    mark_cell_error(x, y)
+    mark_cell_error(x + 1, y)
+    mark_cell_error(x, y + 1)
+    mark_cell_error(x + 1, y + 1)
   end
 end
 
@@ -435,10 +414,10 @@ function is_cell_valid_and_filled(x, y)
   return is_cell_valid(x, y) and is_cell_filled(x, y)
 end
 
--- flag the co-ordinates as having an error
-function flag_cell_as_error(x, y)
+-- mark the co-ordinates as having an error
+function mark_cell_error(x, y)
   debug_print("flagging "..tostr(x)..","..tostr(y).." as error")
-  error_indexes[coord_to_index(x, y)] = true
+  error_cells[coord_to_index(x, y)] = true
 end
 
 -- build the board in the map
@@ -509,7 +488,7 @@ function read_inputs()
     elseif btnp(k_cancel) then
       toggle_mark(spr_fill)
     end
-    error_indexes = {}
+    error_cells = {}
   end
 end
 
@@ -544,7 +523,7 @@ end
 
 -- return true if the co-ordinates have an error
 function cell_has_error(x, y)
-  return error_indexes[coord_to_index(x, y)]
+  return error_cells[coord_to_index(x, y)]
 end
 
 -- draw the marks onto the board
@@ -615,13 +594,12 @@ end
 
 -- convert the index into x and y coordinates
 function index_to_coord(idx)
-  local x = nil
-  local y = nil
+  local x, y = nil, nil
 
   y = flr(idx / level["width"])
   x = idx - y * level["width"]
 
-  return {x, y}
+  return x, y
 end
 
 -- restrict the value to the given range
