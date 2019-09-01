@@ -117,7 +117,6 @@ levels[1]["solution"] = {
 
 board = {}
 marks = {}
-checked_indexes = {}
 checked_cells = {}
 error_indexes = {}
 is_island_connected = false
@@ -227,6 +226,7 @@ end
 
 -- check whether the current solution is correct
 function check_solution()
+  error_indexes = {}
   is_correct = true
 
   check_islands()
@@ -242,31 +242,20 @@ end
 -- check each island contains the required number of cells and does
 -- not connect to any other islands
 function check_islands()
-  -- reset the variables we'll use to check the solution
-  checked_indexes = {}
-  checked_cells = {}
-  error_indexes = {}
-
-  for k,v in pairs(level["islands"]) do
+  for k, v in pairs(level["islands"]) do
     check_island(k, v[1], v[2], v[3])
   end
 end
 
 -- check the island has the required number of cells
 function check_island(idx, count, x, y)
-  -- skip islands that we've already hit in earlier checks
-  if checked_indexes[idx] then
-    debug_print("already checked "..tostr(idx))
-    return
-  end
-
   debug_print("checking island "..tostr(idx).." at "..tostr(x)..","..tostr(y).." should have "..tostr(count))
 
   local actual_count = 1
   is_island_connected = false
+  checked_cells = {}
 
   mark_cell_checked(x, y)
-  checked_indexes[idx] = true
 
   actual_count += check_island_cell(x, y - 1)
   actual_count += check_island_cell(x + 1, y)
@@ -318,7 +307,6 @@ end
 -- 2. do not contain any regions of 2x2 or greater
 function check_sea()
   -- reset the variables we'll use to check the solution
-  checked_indexes = {}
   checked_cells = {}
   pool_count = 0
   sea_mark_count = 0
