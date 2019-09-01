@@ -510,12 +510,13 @@ function read_inputs()
     pointer.counter = 0
   end
 
-  if is_writable() then
+  if xor(btnp(k_confirm), btnp(k_cancel)) and is_writable() then
     if btnp(k_confirm) then
       toggle_mark(spr_mark)
     elseif btnp(k_cancel) then
       toggle_mark(spr_fill)
     end
+    error_indexes = {}
   end
 end
 
@@ -528,13 +529,6 @@ function toggle_mark(sprite)
   else
     marks[idx] = sprite
   end
-
-  on_board_changed()
-end
-
--- called whenever the board has been marked/filled
-function on_board_changed()
-  error_indexes = {}
 end
 
 -- return true if the cell can be marked
@@ -606,6 +600,17 @@ end
 
 -- helper functions --
 ----------------------
+
+-- exclusive or
+function xor(a,b)
+  if a and not b then
+    return true
+  elseif b and not a then
+    return true
+  else
+    return false
+  end
+end
 
 -- convert the x and y coordinates into an index
 function coord_to_index(x, y)
