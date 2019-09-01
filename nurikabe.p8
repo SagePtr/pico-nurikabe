@@ -26,8 +26,8 @@ k_left = 0
 k_right = 1
 k_up = 2
 k_down = 3
-k_mark = 4
-k_fill = 5
+k_confirm = 4
+k_cancel = 5
 
 -- palette --
 -------------
@@ -510,10 +510,12 @@ function read_inputs()
     pointer.counter = 0
   end
 
-  if (btnp(k_mark) and is_writable()) then
-    toggle_mark(spr_mark)
-  elseif (btnp(k_fill) and is_writable()) then
-    toggle_mark(spr_fill)
+  if is_writable() then
+    if btnp(k_confirm) then
+      toggle_mark(spr_mark)
+    elseif btnp(k_cancel) then
+      toggle_mark(spr_fill)
+    end
   end
 end
 
@@ -526,6 +528,13 @@ function toggle_mark(sprite)
   else
     marks[idx] = sprite
   end
+
+  on_board_changed()
+end
+
+-- called whenever the board has been marked/filled
+function on_board_changed()
+  error_indexes = {}
 end
 
 -- return true if the cell can be marked
