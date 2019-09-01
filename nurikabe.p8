@@ -48,6 +48,7 @@ col_lightblue = 12
 col_lightpurple = 13
 col_pink = 14
 col_tan = 15
+col_trans = col_darkgreen
 
 -- constants --
 ---------------
@@ -61,6 +62,21 @@ screen_width = 128
 screen_height = 128
 numbers_offset = 15 -- number sprites start at 16
 bg = col_lilac
+menu_bg = col_white
+menu_fg = col_orange
+menu_item_bg = col_yellow
+menu_item_fg = col_black
+menu_x = 32
+menu_y = 32
+menu_padding = 2
+char_width = 4
+
+-- modes --
+-----------
+
+mode_menu = 1
+mode_level = 2
+mode = nil
 
 -- globals --
 -------------
@@ -76,6 +92,10 @@ board_offset_x = nil
 board_offset_y = nil
 map_screen_x = nil
 map_screen_y = nil
+menu_items = {}
+menu_item_count = 0
+menu_item_height = 8
+menu_item_gap = 4
 
 levels = {
   {
@@ -110,24 +130,32 @@ function _init()
   debug_print("_init")
   -- use dark green instead of black as the transparent colour
   palt(col_black, false)
-  palt(col_darkgreen, true)
+  palt(col_trans, true)
 
   pointer = make_pointer()
-  load_level(1)
+
+  mode = mode_menu
+  -- mode = mode_level
+  -- load_level(1)
 
   -- load_solution()
   -- check_solution()
 end
 
 function _update()
-  read_inputs()
+  if mode == mode_menu then
+    update_menu()
+  elseif mode == mode_level then
+    update_level()
+  end
 end
 
 function _draw()
-  cls()
-  draw_level()
-
-  foreach(actor,draw_actor)
+  if mode == mode_menu then
+    draw_menu()
+  elseif mode == mode_level then
+    draw_level()
+  end
 end
 
 -- load the given level in
@@ -446,26 +474,14 @@ function build_board()
   end
 end
 
--- draw the level, the board and the markings
-function draw_level()
-  rectfill(0, 0, 127, 127, bg)
-  map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
-  draw_numbers()
-  draw_marks()
-
-  print("level "..tostr(level_id), 5, 5, col_white)
-
-  -- flip whether the point is visible every 16 frames
-  pointer.counter += 1
-
-  if (pointer.counter == 16) then
-    pointer.show = 1 - pointer.show
-    pointer.counter = 0
-  end
+-- read the menu inputs
+function update_menu()
+  -- todo
+  -- debug_print("update_menu called")
 end
 
 -- read the level inputs
-function read_inputs()
+function update_level()
   local changed = false
   if (btnp(k_left)) pointer.x -= 1 changed = true
   if (btnp(k_right)) pointer.x += 1 changed = true
@@ -490,6 +506,52 @@ function read_inputs()
     end
     error_cells = {}
   end
+end
+
+-- draw the menu
+function draw_menu()
+  cls()
+  rectfill(0, 0, 127, 127, bg)
+  menu_item_count = 0
+  menu_items = {}
+
+  add_menu_item("level select", debug_print("level select"))
+  add_menu_item("how to play", debug_print("how to play"))
+end
+
+-- add an item to the menu
+function add_menu_item(text, action)
+  local y_offset = menu_item_height * menu_item_count
+  local y0 = menu_y + y_offset + menu_item_gap * menu_item_count
+  local y1 = y0 + menu_item_height
+  local width = #text * char_width + menu_padding
+
+  rounded_rectfill(menu_x, y0, width, menu_item_height, menu_bg)
+  print(text, menu_x + menu_padding, y0 + menu_padding, menu_fg)
+
+  menu_item_count += 1
+  add(menu, action)
+end
+
+-- draw the level, the board and the markings
+function draw_level()
+  cls()
+  rectfill(0, 0, 127, 127, bg)
+  map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
+  draw_numbers()
+  draw_marks()
+
+  print("level "..tostr(level_id), 5, 5, col_white)
+
+  -- flip whether the point is visible every 16 frames
+  pointer.counter += 1
+
+  if (pointer.counter == 16) then
+    pointer.show = 1 - pointer.show
+    pointer.counter = 0
+  end
+
+  foreach(actor,draw_actor)
 end
 
 -- toggle the sprite in the current cell
@@ -575,6 +637,12 @@ end
 
 -- helper functions --
 ----------------------
+
+-- draw a rounded rectangle
+function rounded_rectfill(x, y, width, height, bg)
+  rectfill(x, y + 1, x + width, y + height - 1, bg) -- short
+  rectfill(x + 1, y, x + width - 1, y + height, bg) -- tall
+end
 
 -- exclusive or
 function xor(a,b)
