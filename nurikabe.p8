@@ -77,6 +77,17 @@ mode_level = 2
 mode_level_select = 3
 mode = nil
 
+-- difficulties --
+
+diff_easy = 1
+diff_normal = 2
+diff_hard = 3
+diff_label = {
+  diff_easy = "easy",
+  diff_normal = "normal",
+  diff_hard = "hard"
+}
+
 -- globals --
 -------------
 
@@ -100,6 +111,7 @@ menu_idx = 1
 
 levels = {
   {
+    diff = diff_easy,
     width = 10,
     height = 10,
     islands = {0, 1, 2, 2, 1, 2, 12, 2, 1, 3, 5, 3, 10, 2, 2, 2, 2, 1, 15, 2, 1, 1, 4, 2, 1, 2, 4, 6, 8, 1, 1, 1, 6, 4, 5, 2, 1, 1},
@@ -117,6 +129,7 @@ levels = {
     }
   },
   {
+    diff = diff_easy,
     width = 10,
     height = 10,
     islands = {0, 4, 1, 3, 13, 1, 6, 2, 11, 2, 1, 5, 1, 4, 0, 2, 2, 1, 16, 4, 4, 1, 11, 2, 4, 5, 5, 1, 2, 3},
@@ -615,8 +628,7 @@ function draw_level()
   map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
   draw_numbers()
   draw_marks()
-
-  print("level "..tostr(level_id), 5, 5, col_white)
+  draw_level_name()
 
   -- flip whether the point is visible every 16 frames
   pointer.counter += 1
@@ -635,7 +647,23 @@ function draw_level_select()
   rectfill(0, 0, 127, 127, bg)
   map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
   draw_numbers()
+  draw_level_name()
+end
+
+-- draw the label for the level
+function draw_level_name()
+  local diff = "unknown"
+
+  if level["diff"] == diff_easy then
+    diff = "easy"
+  elseif level["diff"] == diff_normal then
+    diff = "normal"
+  elseif level["diff"] == diff_hard then
+    diff = "hard"
+  end
+
   print("level "..tostr(level_id), 5, 5, col_white)
+  print(diff, screen_width - #diff*char_width - 5, 5, col_white)
 end
 
 -- toggle the sprite in the current cell
