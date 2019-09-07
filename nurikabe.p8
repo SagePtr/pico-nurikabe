@@ -97,6 +97,7 @@ level = nil
 level_id = nil
 level_size = nil
 level_islands = nil
+timer = nil
 offset_x = nil
 offset_y = nil
 board_offset_x = nil
@@ -162,8 +163,8 @@ function _init()
   -- use dark green instead of black as the transparent colour
   palt(col_black, false)
   palt(col_trans, true)
-
   pointer = make_pointer()
+
   open_menu()
 end
 
@@ -203,6 +204,7 @@ function open_level()
   mode = mode_level
   pointer.x = 0
   pointer.y = 0
+  timer = time()
   init_menu()
 end
 
@@ -629,6 +631,7 @@ function draw_level()
   draw_numbers()
   draw_marks()
   draw_level_name()
+  draw_timer()
 
   -- flip whether the point is visible every 16 frames
   pointer.counter += 1
@@ -664,6 +667,33 @@ function draw_level_name()
 
   print("level "..tostr(level_id), 5, 5, col_white)
   print(diff, screen_width - #diff*char_width - 5, 5, col_white)
+end
+
+-- draw the timer
+function draw_timer()
+  local hours, minutes, seconds = split_time(time() - timer)
+  local text = zero_pad(hours)..":"..zero_pad(minutes)..":"..zero_pad(seconds)
+
+  print(text, screen_width - #text*char_width - 5, screen_height - 10, col_white)
+end
+
+-- return the time in hours, minutes and seconds
+function split_time(seconds)
+  local hours, minutes = 0, 0
+
+  if seconds >= 3600 then
+    hours = flr(seconds / 3600)
+    seconds -= hours * 3600
+  end
+
+  if seconds >= 60 then
+    minutes = flr(seconds / 60)
+    seconds -= minutes * 60
+  end
+
+  seconds = flr(seconds)
+
+  return hours, minutes, seconds
 end
 
 -- toggle the sprite in the current cell
@@ -796,6 +826,14 @@ end
 -- restrict the value to the given range
 function clamp(val, a, b)
   return max(a, min(b, val))
+end
+
+-- pad the number to two digits
+function zero_pad(number)
+  if number < 10 then
+    number = "0"..tostr(number)
+  end
+  return number
 end
 
 -- print the message when debugging
