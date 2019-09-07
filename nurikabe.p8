@@ -68,6 +68,14 @@ menu_x = 32
 menu_y = 32
 menu_padding = 2
 char_width = 4
+pointer_min_x = 20
+pointer_min_y = 30
+pointer_max_x = 110
+pointer_max_y = 110
+offset_x_min = 24
+offset_y_min = 32
+top_bar_bg = col_darkblue
+top_bar_fg = col_white
 
 -- modes --
 -----------
@@ -89,7 +97,7 @@ diff_hard = 3
 actor = {}
 pointer = nil
 level = nil
-level_id = nil
+level_id = 1
 level_size = nil
 level_islands = nil
 timer = nil
@@ -247,6 +255,13 @@ levels = {
     islands = {9, 5, 2, 5, 8, 1, 3, 2, 3, 4, 12, 3, 2, 2, 3, 2, 0, 4, 12, 3, 4, 3, 2, 1, 4, 4, 7, 2, 7, 3},
     solution = {}
   },
+  {
+    diff = diff_easy,
+    width = 10,
+    height = 18,
+    islands = {1, 3, 1, 2, 3, 3, 10, 3, 2, 2, 3, 2, 24, 4, 4, 5, 1, 1, 3, 5, 14, 5, 2, 3, 11, 2, 3, 5, 4, 3, 2, 1, 4, 1, 10, 3, 10, 2, 3, 3, 2, 2, 12, 2, 12, 4, 3, 3, 2, 2, 4, 2, 2, 4},
+    solution = {}
+  },
 }
 
 marks = {}
@@ -311,7 +326,6 @@ end
 -- switch mode to level select
 function open_level_select()
   mode = mode_level_select
-  level_id = 1
   load_level()
 end
 
@@ -326,6 +340,7 @@ function load_level()
   level = levels[level_id]
   level_islands = decompress_islands(level["islands"])
   level_size = coord_to_index(level["width"] - 1, level["height"] - 1)
+  is_correct = false
   marks = {}
 
   for x = 0, level["width"] - 1 do
@@ -339,6 +354,10 @@ function load_level()
 
   offset_x = (screen_width - board_width) / 2
   offset_y = (screen_height - board_height) / 2
+
+  offset_x = max(offset_x, offset_x_min)
+  offset_y = max(offset_y, offset_y_min)
+
   board_offset_x = offset_x - border_width
   board_offset_y = offset_y - border_height
   map_screen_x = level["width"] + 2
@@ -653,6 +672,7 @@ end
 -- read the level inputs
 function update_level()
   local changed = false
+
   if (btnp(k_left)) pointer.x -= 1 changed = true
   if (btnp(k_right)) pointer.x += 1 changed = true
   if (btnp(k_up)) pointer.y -= 1 changed = true
@@ -662,10 +682,29 @@ function update_level()
   pointer.x = clamp(pointer.x, 0, level["width"] - 1)
   pointer.y = clamp(pointer.y, 0, level["height"] - 1)
 
-  -- reset the counter so the pointer is visible
   if changed then
+    -- reset the counter so the pointer is visible
     pointer.show = 1
     pointer.counter = 0
+
+    local pointer_x, pointer_y = get_actor_coords(pointer)
+
+    -- update offsets
+    if pointer_x > pointer_max_x then
+      board_offset_x -= cell_width
+      offset_x -= cell_width
+    elseif pointer_x < pointer_min_x then
+      board_offset_x += cell_width
+      offset_x += cell_width
+    end
+
+    if pointer_y > pointer_max_y then
+      board_offset_y -= cell_width
+      offset_y -= cell_width
+    elseif pointer_y < pointer_min_y then
+      board_offset_y += cell_width
+      offset_y += cell_width
+    end
   end
 
   if xor(btnp(k_confirm), btnp(k_cancel)) and is_writable() then
@@ -730,8 +769,6 @@ function draw_level()
   map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
   draw_numbers()
   draw_marks()
-  draw_level_name()
-  draw_timer()
 
   -- flip whether the point is visible every 16 frames
   pointer.counter += 1
@@ -742,6 +779,9 @@ function draw_level()
   end
 
   foreach(actor,draw_actor)
+
+  draw_level_name()
+  draw_timer()
 end
 
 -- draw the level select screen
@@ -765,8 +805,9 @@ function draw_level_name()
     diff = "hard"
   end
 
-  print("level "..tostr(level_id), 5, 5, col_white)
-  print(diff, screen_width - #diff*char_width - 5, 5, col_white)
+  rectfill(0, 0, 127, cell_height + 6, top_bar_bg)
+  print("level "..tostr(level_id), 5, 5, top_bar_fg)
+  print(diff, screen_width - #diff*char_width - 5, 5, top_bar_fg)
 end
 
 -- draw the timer
@@ -774,7 +815,7 @@ function draw_timer()
   local hours, minutes, seconds = split_time(time() - timer)
   local text = zero_pad(hours)..":"..zero_pad(minutes)..":"..zero_pad(seconds)
 
-  print(text, screen_width - #text*char_width - 5, screen_height - 10, col_white)
+  print(text, flr((screen_width - #text*char_width) / 2), 5, top_bar_fg)
 end
 
 -- return the time in hours, minutes and seconds
@@ -882,10 +923,17 @@ end
 -- draw the given actor
 function draw_actor(a)
   if (a.show == 1) then
-    local sx = a.x * cell_width + offset_x
-    local sy = a.y * cell_height + offset_y
-    spr(a.spr, sx, sy)
+    local x, y = get_actor_coords(a)
+    spr(a.spr, x, y)
   end
+end
+
+-- return the actor's co-ordinates
+function get_actor_coords(a)
+  local x = a.x * cell_width + offset_x
+  local y = a.y * cell_height + offset_y
+
+  return x, y
 end
 
 -- helper functions --
