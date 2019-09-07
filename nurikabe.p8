@@ -64,8 +64,6 @@ numbers_offset = 15 -- number sprites start at 16
 bg = col_lilac
 menu_bg = col_white
 menu_fg = col_orange
-menu_item_bg = col_yellow
-menu_item_fg = col_black
 menu_x = 32
 menu_y = 32
 menu_padding = 2
@@ -96,6 +94,7 @@ menu_items = {}
 menu_item_count = 0
 menu_item_height = 8
 menu_item_gap = 4
+menu_idx = 1
 
 levels = {
   {
@@ -133,11 +132,9 @@ function _init()
   palt(col_trans, true)
 
   pointer = make_pointer()
+  open_menu()
 
-  mode = mode_menu
-  -- mode = mode_level
   -- load_level(1)
-
   -- load_solution()
   -- check_solution()
 end
@@ -156,6 +153,17 @@ function _draw()
   elseif mode == mode_level then
     draw_level()
   end
+end
+
+-- switch mode to menu
+function open_menu()
+  mode = mode_menu
+
+  menu_item_count = 0
+  menu_items = {}
+
+  make_menu_item("level select", open_level_select)
+  make_menu_item("how to play", how_to_play)
 end
 
 -- load the given level in
@@ -476,8 +484,17 @@ end
 
 -- read the menu inputs
 function update_menu()
-  -- todo
-  -- debug_print("update_menu called")
+  if (btnp(k_up)) then
+    menu_idx -= 1
+  elseif (btnp(k_down)) then
+    menu_idx += 1
+  end
+
+  menu_idx = clamp(menu_idx, 1, #menu_items)
+
+  if btnp(k_confirm) then
+    menu_items[menu_idx]["action"]()
+  end
 end
 
 -- read the level inputs
@@ -512,25 +529,24 @@ end
 function draw_menu()
   cls()
   rectfill(0, 0, 127, 127, bg)
-  menu_item_count = 0
-  menu_items = {}
 
-  add_menu_item("level select", debug_print("level select"))
-  add_menu_item("how to play", debug_print("how to play"))
+  for idx, menu_item in pairs(menu_items) do
+    draw_menu_item(menu_item, idx)
+  end
 end
 
--- add an item to the menu
-function add_menu_item(text, action)
-  local y_offset = menu_item_height * menu_item_count
-  local y0 = menu_y + y_offset + menu_item_gap * menu_item_count
-  local y1 = y0 + menu_item_height
-  local width = #text * char_width + menu_padding
+-- draw the menu item
+-- use the index to figure out whether it's active
+function draw_menu_item(item, idx)
+  local offset = menu_item_height * idx
+  local y = menu_y + offset + menu_item_gap * idx
 
-  rounded_rectfill(menu_x, y0, width, menu_item_height, menu_bg)
-  print(text, menu_x + menu_padding, y0 + menu_padding, menu_fg)
+  if idx == menu_idx then
+    local width = #item.text * char_width + menu_padding
+    rounded_rectfill(menu_x, y, width, menu_item_height, menu_bg)
+  end
 
-  menu_item_count += 1
-  add(menu, action)
+  print(item.text, menu_x + menu_padding, y + menu_padding, menu_fg)
 end
 
 -- draw the level, the board and the markings
@@ -552,6 +568,16 @@ function draw_level()
   end
 
   foreach(actor,draw_actor)
+end
+
+-- show the level select
+function open_level_select()
+  debug_print("todo: level select")
+end
+
+-- teach how to play
+function how_to_play()
+  debug_print("todo: how to play")
 end
 
 -- toggle the sprite in the current cell
@@ -624,6 +650,17 @@ function make_actor(x, y)
   add(actor, a)
 
   return a
+end
+
+-- return a new menu item
+function make_menu_item(text, action)
+  i = {}
+  i.text = text
+  i.action = action
+
+  add(menu_items, i)
+
+  return i
 end
 
 -- draw the given actor
