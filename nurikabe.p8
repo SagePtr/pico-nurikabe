@@ -74,6 +74,7 @@ char_width = 4
 
 mode_menu = 1
 mode_level = 2
+mode_level_select = 3
 mode = nil
 
 -- globals --
@@ -84,6 +85,7 @@ pointer = nil
 level = nil
 level_id = nil
 level_size = nil
+level_islands = nil
 offset_x = nil
 offset_y = nil
 board_offset_x = nil
@@ -113,6 +115,23 @@ levels = {
       {1, 8}, {3, 8}, {5, 8}, {6, 8}, {7, 8}, {8, 8}, {9, 8},
       {2, 9}, {3, 9}, {4, 9}, {5, 9}, {8, 9}
     }
+  },
+  {
+    width = 10,
+    height = 10,
+    islands = {0, 4, 1, 3, 13, 1, 6, 2, 11, 2, 1, 5, 1, 4, 0, 2, 2, 1, 16, 4, 4, 1, 11, 2, 4, 5, 5, 1, 2, 3},
+    solution = {
+      {1, 0}, {5, 0}, {6, 0}, {7, 0}, {8, 0}, {9, 0},
+      {1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {7, 1}, {9, 1},
+      {2, 2}, {5, 2}, {6, 2}, {9, 2},
+      {0, 3}, {1, 3}, {2, 3}, {3, 3}, {4, 3}, {6, 3}, {8, 3},
+      {2, 4}, {4, 4}, {6, 4}, {8, 4},
+      {0, 5}, {1, 5}, {2, 5}, {3, 5}, {4, 5}, {5, 5}, {6, 5}, {7, 5}, {8, 5},
+      {4, 6}, {6, 6}, {8, 6},
+      {0, 7}, {1, 7}, {2, 7}, {3, 7}, {4, 7}, {5, 7}, {6, 7}, {8, 7}, {9, 7},
+      {1, 8}, {7, 8}, {9, 8},
+      {2, 9}, {3, 9}, {4, 9}, {5, 9}, {6, 9}, {7, 9}, {8, 9}, {9, 9}
+    }
   }
 }
 
@@ -133,10 +152,6 @@ function _init()
 
   pointer = make_pointer()
   open_menu()
-
-  -- load_level(1)
-  -- load_solution()
-  -- check_solution()
 end
 
 function _update()
@@ -144,6 +159,8 @@ function _update()
     update_menu()
   elseif mode == mode_level then
     update_level()
+  elseif mode == mode_level_select then
+    update_level_select()
   end
 end
 
@@ -152,6 +169,8 @@ function _draw()
     draw_menu()
   elseif mode == mode_level then
     draw_level()
+  elseif mode == mode_level_select then
+    draw_level_select()
   end
 end
 
@@ -163,15 +182,34 @@ function open_menu()
   menu_items = {}
 
   make_menu_item("level select", open_level_select)
-  make_menu_item("how to play", how_to_play)
+  make_menu_item("how to play", open_how_to_play)
 end
 
--- load the given level in
+-- switch mode to level
+function open_level()
+  mode = mode_level
+  pointer.x = 0
+  pointer.y = 0
+  init_menu()
+end
+
+-- switch mode to level select
+function open_level_select()
+  mode = mode_level_select
+  level_id = 1
+  load_level()
+end
+
+-- switch mode to how to play
+function open_how_to_play()
+  -- todo
+end
+
+-- load the level in
 -- performs one-off calculations to set the state of the board
-function load_level(id)
-  level_id = id
-  level = levels[id]
-  level["islands"] = decompress_islands(level["islands"])
+function load_level()
+  level = levels[level_id]
+  level_islands = decompress_islands(level["islands"])
   level_size = coord_to_index(level["width"] - 1, level["height"] - 1)
   marks = {}
 
@@ -192,8 +230,6 @@ function load_level(id)
   map_screen_y = level["height"] + 2
 
   build_board()
-  init_menu()
-  mode = mode_level
 end
 
 -- load the islands from the run-length encoded data
@@ -221,6 +257,7 @@ end
 -- initialise the level menu items
 function init_menu()
   menuitem(1, "check solution", check_solution)
+  menuitem(2, "level select", open_level_select)
 
   if debug == 1 then menuitem(3, "show solution", load_solution) end
 end
@@ -258,7 +295,7 @@ end
 -- check each island contains the required number of cells and does
 -- not connect to any other islands
 function check_islands()
-  for k, v in pairs(level["islands"]) do
+  for k, v in pairs(level_islands) do
     check_island(k, v[1], v[2], v[3])
   end
 end
@@ -425,14 +462,15 @@ end
 
 -- return true if the co-ordinates are within the level boundary
 function is_cell_valid(x, y)
-  local idx = coord_to_index(x, y)
-
-  return idx >= 0 and idx <= level_size
+  if x >= 0 and x < level["width"] and y >= 0 and y < level["height"] then
+    return true
+  end
+  return false
 end
 
 -- return true if the co-ordinates are a number
 function is_cell_number(x, y)
-  for cell in all(level["islands"]) do
+  for cell in all(level_islands) do
     if (cell[2] == x and cell[3] == y) then
       return true
     end
@@ -525,6 +563,27 @@ function update_level()
   end
 end
 
+-- read the level select inputs
+function update_level_select()
+  local tmp_level_id = level_id
+
+  if btnp(k_left) then
+    level_id -= 1
+  elseif btnp(k_right) then
+    level_id += 1
+  end
+
+  level_id = clamp(level_id, 1, #levels)
+
+  if level_id ~= tmp_level_id then
+    load_level()
+  end
+
+  if btnp(k_confirm) then
+    open_level()
+  end
+end
+
 -- draw the menu
 function draw_menu()
   cls()
@@ -570,14 +629,13 @@ function draw_level()
   foreach(actor,draw_actor)
 end
 
--- show the level select
-function open_level_select()
-  debug_print("todo: level select")
-end
-
--- teach how to play
-function how_to_play()
-  debug_print("todo: how to play")
+-- draw the level select screen
+function draw_level_select()
+  cls()
+  rectfill(0, 0, 127, 127, bg)
+  map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
+  draw_numbers()
+  print("level "..tostr(level_id), 5, 5, col_white)
 end
 
 -- toggle the sprite in the current cell
@@ -598,7 +656,7 @@ end
 
 -- draw the numbers on the board
 function draw_numbers()
-  for cell in all(level["islands"]) do
+  for cell in all(level_islands) do
     local sprite = cell[1] + numbers_offset
 
     if cell_has_error(cell[2], cell[3]) then
@@ -715,6 +773,34 @@ end
 -- print the message when debugging
 function debug_print(msg)
   if (debug == 1) printh(msg)
+end
+
+-- converts anything to string, even nested tables
+function tostring(any)
+  if type(any)=="function" then
+    return "function"
+  end
+  if any==nil then
+    return "nil"
+  end
+  if type(any)=="string" then
+    return any
+  end
+  if type(any)=="boolean" then
+    if any then return "true" end
+    return "false"
+  end
+  if type(any)=="table" then
+    local str = "{ "
+    for k,v in pairs(any) do
+      str=str..tostring(k).."->"..tostring(v).." "
+    end
+    return str.."}"
+  end
+  if type(any)=="number" then
+    return ""..any
+  end
+  return "unknown" -- should never show
 end
 
 __gfx__
