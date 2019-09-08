@@ -53,6 +53,7 @@ col_trans = col_darkgreen
 -- constants --
 ---------------
 
+cart_id = "mmawdsley_nurikabe_1"
 debug = 1
 cell_width = 8
 cell_height = 8
@@ -276,6 +277,7 @@ is_correct = false
 
 function _init()
   debug_print("_init")
+  cartdata(cart_id)
   -- use dark green instead of black as the transparent colour
   palt(col_black, false)
   palt(col_trans, true)
@@ -419,6 +421,8 @@ function check_solution()
 
   check_islands()
   check_sea()
+
+  set_level_complete(level_id, is_correct)
 
   if is_correct then
     debug_print("solution is correct")
@@ -792,6 +796,12 @@ function draw_level_select()
   map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
   draw_numbers()
   draw_level_name()
+
+  if get_level_complete(level_id) then
+    debug_print("level "..tostr(level_id).." is complete")
+  else
+    debug_print("level "..tostr(level_id).." is not complete")
+  end
 end
 
 -- draw the label for the level
@@ -932,6 +942,16 @@ function get_actor_coords(a)
   local y = a.y * cell_height + offset_y
 
   return x, y
+end
+
+-- return true if the level has been completed
+function get_level_complete(level_id)
+  return dget(level_id - 1) == 1 and true or false
+end
+
+-- set whether the level has been completed
+function set_level_complete(level_id, is_complete)
+  dset(level_id - 1, is_complete and 1 or 0)
 end
 
 -- helper functions --
