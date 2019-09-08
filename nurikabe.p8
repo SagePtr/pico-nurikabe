@@ -78,6 +78,8 @@ offset_x_min = 24
 offset_y_min = 32
 top_bar_bg = col_darkblue
 top_bar_fg = col_white
+success_bg = col_darkblue
+success_fg = col_white
 
 -- modes --
 -----------
@@ -284,13 +286,18 @@ function _init()
   palt(col_trans, true)
   pointer = make_pointer()
 
-  open_menu()
+  level_id = 1
+  load_level()
+  open_level()
+  load_solution()
+  check_solution()
+  -- open_menu()
 end
 
 function _update()
   if mode == mode_menu then
     update_menu()
-  elseif mode == mode_level then
+  elseif mode == mode_level and is_correct == false then
     update_level()
   elseif mode == mode_level_select then
     update_level_select()
@@ -792,6 +799,8 @@ function draw_level()
 
   draw_level_name()
   draw_timer()
+
+  if is_correct then draw_success() end
 end
 
 -- draw the level select screen
@@ -837,6 +846,13 @@ function draw_timer()
   local text = zero_pad(hours)..":"..zero_pad(minutes)..":"..zero_pad(seconds)
 
   print(text, flr((screen_width - #text*char_width) / 2), 5, top_bar_fg)
+end
+
+-- draw the success window
+function draw_success()
+  local text = "level complete!"
+
+  print(text, flr((screen_width - #text*char_width) / 2), screen_height, success_fg)
 end
 
 -- return the time in hours, minutes and seconds
