@@ -102,7 +102,8 @@ level = nil
 level_id = 1
 level_size = nil
 level_islands = nil
-timer = nil
+level_duration = nil
+level_start = nil
 offset_x = nil
 offset_y = nil
 board_offset_x = nil
@@ -322,7 +323,8 @@ function open_level()
   mode = mode_level
   pointer.x = 0
   pointer.y = 0
-  timer = time()
+  level_start = time()
+  level_duration = 0
   init_menu()
 end
 
@@ -720,6 +722,9 @@ function update_level()
     end
     error_cells = {}
   end
+
+  -- update how much time has been spent
+  if (is_correct == false) then level_duration = time() - level_start end
 end
 
 -- read the level select inputs
@@ -828,7 +833,7 @@ end
 
 -- draw the timer
 function draw_timer()
-  local hours, minutes, seconds = split_time(time() - timer)
+  local hours, minutes, seconds = split_time(level_duration)
   local text = zero_pad(hours)..":"..zero_pad(minutes)..":"..zero_pad(seconds)
 
   print(text, flr((screen_width - #text*char_width) / 2), 5, top_bar_fg)
