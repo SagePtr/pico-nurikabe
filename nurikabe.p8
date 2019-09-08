@@ -798,9 +798,7 @@ function draw_level_select()
   draw_level_name()
 
   if get_level_complete(level_id) then
-    debug_print("level "..tostr(level_id).." is complete")
-  else
-    debug_print("level "..tostr(level_id).." is not complete")
+    draw_level_complete()
   end
 end
 
@@ -819,6 +817,13 @@ function draw_level_name()
   rectfill(0, 0, 127, cell_height + 6, top_bar_bg)
   print("level "..tostr(level_id), 5, 5, top_bar_fg)
   print(diff, screen_width - #diff*char_width - 5, 5, top_bar_fg)
+end
+
+-- draw that the level is complete
+function draw_level_complete()
+  local text = "completed"
+
+  print(text, flr((screen_width - #text*char_width) / 2), 5, top_bar_fg)
 end
 
 -- draw the timer
