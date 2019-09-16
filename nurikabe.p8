@@ -78,8 +78,10 @@ offset_x_min = 24
 offset_y_min = 32
 top_bar_bg = col_darkblue
 top_bar_fg = col_white
-success_bg = col_darkblue
-success_fg = col_white
+top_bar_fg_shadow = col_black
+success_bg = col_tan
+success_fg = col_black
+success_shadow = col_lightgrey
 
 -- modes --
 -----------
@@ -286,18 +288,18 @@ function _init()
   palt(col_trans, true)
   pointer = make_pointer()
 
-  level_id = 1
-  load_level()
-  open_level()
-  load_solution()
-  check_solution()
-  -- open_menu()
+  -- level_id = 1
+  -- load_level()
+  -- open_level()
+  -- load_solution()
+  -- check_solution()
+  open_menu()
 end
 
 function _update()
   if mode == mode_menu then
     update_menu()
-  elseif mode == mode_level and is_correct == false then
+  elseif mode == mode_level then
     update_level()
   elseif mode == mode_level_select then
     update_level_select()
@@ -431,13 +433,9 @@ function check_solution()
   check_islands()
   check_sea()
 
-  set_level_complete(level_id, is_correct)
+  if is_correct then pointer.show = 0 end
 
-  if is_correct then
-    debug_print("solution is correct")
-  else
-    debug_print("solution is not correct")
-  end
+  set_level_complete(level_id, is_correct)
 end
 
 -- check each island contains the required number of cells and does
@@ -683,14 +681,31 @@ function update_menu()
   end
 end
 
--- read the level inputs
+-- update the level state
 function update_level()
+  if is_correct then
+    update_level_complete_state()
+  else
+    update_level_state()
+  end
+end
+
+-- read the level inputs and update the state
+function update_level_state()
   local changed = false
 
   if (btnp(k_left)) pointer.x -= 1 changed = true
   if (btnp(k_right)) pointer.x += 1 changed = true
   if (btnp(k_up)) pointer.y -= 1 changed = true
   if (btnp(k_down)) pointer.y += 1 changed = true
+
+  -- flip whether the point is visible every 16 frames
+  pointer.counter += 1
+
+  if pointer.counter == 16 then
+    pointer.show = 1 - pointer.show
+    pointer.counter = 0
+  end
 
   -- limit the range
   pointer.x = clamp(pointer.x, 0, level["width"] - 1)
@@ -732,6 +747,13 @@ function update_level()
 
   -- update how much time has been spent
   if (is_correct == false) then level_duration = time() - level_start end
+end
+
+-- read the level complete inputs and update the state
+function update_level_complete_state()
+  if btnp(k_confirm) or btnp(k_cancel) then
+    open_level_select()
+  end
 end
 
 -- read the level select inputs
@@ -787,15 +809,7 @@ function draw_level()
   draw_numbers()
   draw_marks()
 
-  -- flip whether the point is visible every 16 frames
-  pointer.counter += 1
-
-  if (pointer.counter == 16) then
-    pointer.show = 1 - pointer.show
-    pointer.counter = 0
-  end
-
-  foreach(actor,draw_actor)
+  foreach(actor, draw_actor)
 
   draw_level_name()
   draw_timer()
@@ -829,8 +843,8 @@ function draw_level_name()
   end
 
   rectfill(0, 0, 127, cell_height + 6, top_bar_bg)
-  print("level "..tostr(level_id), 5, 5, top_bar_fg)
-  print(diff, screen_width - #diff*char_width - 5, 5, top_bar_fg)
+  print_shadow("level "..tostr(level_id), 5, 5, top_bar_fg, top_bar_fg_shadow)
+  print_shadow(diff, screen_width - #diff*char_width - 5, 5, top_bar_fg)
 end
 
 -- draw that the level is complete
@@ -845,14 +859,21 @@ function draw_timer()
   local hours, minutes, seconds = split_time(level_duration)
   local text = zero_pad(hours)..":"..zero_pad(minutes)..":"..zero_pad(seconds)
 
-  print(text, flr((screen_width - #text*char_width) / 2), 5, top_bar_fg)
+  print_shadow(text, flr((screen_width - #text*char_width) / 2), 5, top_bar_fg, top_bar_fg_shadow)
 end
 
 -- draw the success window
 function draw_success()
   local text = "level complete!"
+  local width = #text * char_width + menu_padding
+  local height = menu_item_height
+  local x = flr((screen_width - width) / 2)
+  local y = flr((screen_height - height) / 2)
 
-  print(text, flr((screen_width - #text*char_width) / 2), screen_height, success_fg)
+  rounded_rectfill(x + 1, y + 1, width, height, success_shadow)
+  rounded_rectfill(x, y, width, height, success_bg)
+
+  print(text, x + menu_padding, y + menu_padding, success_fg)
 end
 
 -- return the time in hours, minutes and seconds
@@ -982,6 +1003,12 @@ end
 
 -- helper functions --
 ----------------------
+
+-- print the text with a "shadow"
+function print_shadow(text, x, y, fg, bg)
+  print(text, x + 1, y + 1, bg)
+  print(text, x, y, fg)
+end
 
 -- draw a rounded rectangle
 function rounded_rectfill(x, y, width, height, bg)
