@@ -827,6 +827,7 @@ end
 function draw_level_select()
   cls()
   rectfill(0, 0, 127, 127, bg)
+  rectfill(0, 0, screen_width - 1, cell_height + 6, bar_bg)
   map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
   draw_numbers()
   draw_level_name()
