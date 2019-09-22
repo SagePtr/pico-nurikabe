@@ -856,7 +856,7 @@ end
 function draw_level_complete()
   local text = "completed"
 
-  print(text, flr((screen_width - #text*char_width) / 2), 5, bar_fg)
+  print_shadow(text, flr((screen_width - #text*char_width) / 2), 5, bar_fg)
 end
 
 -- draw the timer
