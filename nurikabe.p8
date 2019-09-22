@@ -73,12 +73,13 @@ char_width = 4
 pointer_min_x = 20
 pointer_min_y = 30
 pointer_max_x = 110
-pointer_max_y = 110
+pointer_max_y = 100
 offset_x_min = 24
 offset_y_min = 32
-top_bar_bg = col_darkblue
-top_bar_fg = col_white
-top_bar_fg_shadow = col_black
+bar_bg = col_darkblue
+bar_fg = col_white
+bar_fg_shadow = col_black
+bottom_bar_height = 10
 success_bg = col_tan
 success_fg = col_black
 success_shadow = col_lightgrey
@@ -288,7 +289,6 @@ function _init()
   palt(col_trans, true)
   pointer = make_pointer()
 
-  -- level_id = 1
   -- load_level()
   -- open_level()
   -- load_solution()
@@ -804,15 +804,21 @@ end
 -- draw the level, the board and the markings
 function draw_level()
   cls()
-  rectfill(0, 0, 127, 127, bg)
+  rectfill(0, 0, screen_width - 1, screen_height - 1, bg)
+
   map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
   draw_numbers()
   draw_marks()
 
   foreach(actor, draw_actor)
 
+  -- draw the ui over the top of the board
+  rectfill(0, 0, screen_width - 1, cell_height + 6, bar_bg)
+  rectfill(0, screen_height - cell_height - 3, screen_width - 1, screen_height - 1, bar_bg)
+
   draw_level_name()
   draw_timer()
+  print_shadow("🅾️mark ❎fill", 71, 120, bar_fg, bar_fg_shadow)
 
   if is_correct then draw_success() end
 end
@@ -842,16 +848,15 @@ function draw_level_name()
     diff = "hard"
   end
 
-  rectfill(0, 0, 127, cell_height + 6, top_bar_bg)
-  print_shadow("level "..tostr(level_id), 5, 5, top_bar_fg, top_bar_fg_shadow)
-  print_shadow(diff, screen_width - #diff*char_width - 5, 5, top_bar_fg)
+  print_shadow("level "..tostr(level_id), 5, 5, bar_fg, bar_fg_shadow)
+  print_shadow(diff, screen_width - #diff*char_width - 5, 5, bar_fg)
 end
 
 -- draw that the level is complete
 function draw_level_complete()
   local text = "completed"
 
-  print(text, flr((screen_width - #text*char_width) / 2), 5, top_bar_fg)
+  print(text, flr((screen_width - #text*char_width) / 2), 5, bar_fg)
 end
 
 -- draw the timer
@@ -859,7 +864,7 @@ function draw_timer()
   local hours, minutes, seconds = split_time(level_duration)
   local text = zero_pad(hours)..":"..zero_pad(minutes)..":"..zero_pad(seconds)
 
-  print_shadow(text, flr((screen_width - #text*char_width) / 2), 5, top_bar_fg, top_bar_fg_shadow)
+  print_shadow(text, flr((screen_width - #text*char_width) / 2), 5, bar_fg, bar_fg_shadow)
 end
 
 -- draw the success window
