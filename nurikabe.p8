@@ -19,6 +19,16 @@ spr_border_bottom_right = 12
 spr_border_bottom_left = 13
 spr_border_top_left = 14
 
+-- sound effects --
+-------------------
+
+sfx_moved = 0
+sfx_blocked = 1
+sfx_wrong = 2
+sfx_fill = 3
+sfx_mark = 4
+sfx_correct = 5
+
 -- keys --
 ----------
 
@@ -555,7 +565,12 @@ function check_solution()
   check_islands()
   check_sea()
 
-  if is_correct then pointer.show = 0 end
+  if is_correct then
+    pointer.show = 0
+    sfx(sfx_correct, 0)
+  else
+    sfx(sfx_wrong, 0)
+  end
 
   set_level_complete(level_id, is_correct)
 end
@@ -815,11 +830,13 @@ end
 -- read the level inputs and update the state
 function update_level_state()
   local changed = false
+  local dir_pressed = false
+  local old_x, old_y = pointer.x, pointer.y
 
-  if (btnp(k_left)) pointer.x -= 1 changed = true
-  if (btnp(k_right)) pointer.x += 1 changed = true
-  if (btnp(k_up)) pointer.y -= 1 changed = true
-  if (btnp(k_down)) pointer.y += 1 changed = true
+  if (btnp(k_left)) pointer.x -= 1 dir_pressed = true
+  if (btnp(k_right)) pointer.x += 1 dir_pressed = true
+  if (btnp(k_up)) pointer.y -= 1 dir_pressed = true
+  if (btnp(k_down)) pointer.y += 1 dir_pressed = true
 
   -- flip whether the point is visible every 16 frames
   pointer.counter += 1
@@ -830,10 +847,19 @@ function update_level_state()
   end
 
   -- limit the range
-  pointer.x = clamp(pointer.x, 0, level_width - 1)
-  pointer.y = clamp(pointer.y, 0, level_height - 1)
+  local clamp_x = clamp(pointer.x, 0, level_width - 1)
+  local clamp_y = clamp(pointer.y, 0, level_height - 1)
 
-  if changed then
+  -- play a sound if they try to go off the board
+  if clamp_x ~= pointer.x or clamp_y ~= pointer.y then
+    sfx(sfx_blocked, 0)
+    pointer.x = clamp_x
+    pointer.y = clamp_y
+  elseif pointer.x ~= old_x or pointer.y ~= old_y then
+    sfx(sfx_moved, 0)
+  end
+
+  if dir_pressed then
     -- reset the counter so the pointer is visible
     pointer.show = 1
     pointer.counter = 0
@@ -861,8 +887,10 @@ function update_level_state()
   if xor(btnp(k_confirm), btnp(k_cancel)) and is_writable() then
     if btnp(k_confirm) then
       toggle_mark(spr_mark)
+      sfx(sfx_mark, 0)
     elseif btnp(k_cancel) then
       toggle_mark(spr_fill)
+      sfx(sfx_fill, 0)
     end
     error_cells = {}
   end
@@ -1314,3 +1342,10 @@ __gfx__
 7777777765d5d5d56f7f7f797333333733333333355555533888888399999999a7994333333333333334997a9994333333333333333333333333499900000000
 777777776d5d5d5567f7f7f973333337333333333555555338888883aaaaaaaaa7994333333333333334997a7999433333333333333333333334999a00000000
 7777777755555555999999993777777333333333333333333333333377777777a7994333333333333334997aa79943333333333333333333333499a700000000
+__sfx__
+000100000815016100141001310012100081001110011100101001010010100101000f1000f1000f100055000e1000e1000d1000d1000d1000d1000e1000e1000f1000f100111001210013100141001610018100
+000100001355012550105500e5500c550095500855006550055500455003550005500150001500015000550001500025000150001500015000150002500035000550006500065000650006500065000650006500
+0002000014450124500f4500c4500a45008450054500345001450004500045005200184001540012400104000d4000b4000840005400024000040000400004000040000400004000040000400000000000000000
+000500000e7500e7000a5001600016000160001700000400170001700017000170001700017000170001700018000180001800018000180001700012000170001600017000000001700017000170001700017000
+000500000a7500a700003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000b00001505016050170501a0501e05021050220502305023050230402303023020230100770006700090000670005700057000570006700100000670007700090000870008700097000c000097000970009700
