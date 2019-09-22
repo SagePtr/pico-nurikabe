@@ -90,6 +90,7 @@ success_shadow = col_lightgrey
 mode_menu = 1
 mode_level = 2
 mode_level_select = 3
+mode_how_to_play = 4
 mode = nil
 
 -- difficulties --
@@ -109,6 +110,8 @@ level_size = nil
 level_islands = nil
 level_duration = nil
 level_start = nil
+level_width = nil
+level_height = nil
 offset_x = nil
 offset_y = nil
 board_offset_x = nil
@@ -272,6 +275,96 @@ levels = {
   },
 }
 
+how_to_play_screens = {
+  {
+    lines = {"1/6 in nurikabe you must solve", "    which blocks are islands", "    and which are part of", "    the sea"},
+    islands = {0, 3, 11, 3, 5, 3, 1, 1},
+    marks = {},
+    fills = {},
+    error_cells = {},
+    width = 5,
+    height = 5
+  },
+  {
+    lines = {"2/6 each number indicates an", "    island with that many", "    blocks in"},
+    islands = {0, 3, 11, 3, 5, 3, 1, 1},
+    marks = {},
+    fills = {
+      1, 2, 3, 4,
+      6, 9,
+      11, 13, 14,
+      15, 16, 17, 19,
+      21, 24
+    },
+    error_cells = {},
+    width = 5,
+    height = 5
+  },
+  {
+    lines = {"3/6 islands can only contain", "    one number"},
+    islands = {0, 3, 11, 3, 5, 3, 1, 1},
+    marks = {},
+    fills = {
+      1, 2, 3, 4,
+      6, 9,
+      11, 14,
+      15, 16, 19,
+      21, 22, 23, 24
+    },
+    error_cells = {12, 18},
+    width = 5,
+    height = 5
+  },
+  {
+    lines = {"4/6 all filled blocks must", "    be connected together"},
+    islands = {0, 3, 11, 3, 5, 3, 1, 1},
+    marks = {},
+    fills = {
+      1, 3, 4,
+      6, 8, 9,
+      11, 13, 14,
+      15, 16, 17, 19,
+      21, 24
+    },
+    error_cells = {3, 4, 8, 9, 13, 14, 19, 24},
+    width = 5,
+    height = 5
+  },
+  {
+    lines = {"5/6 filled blocks cannot have", "    any area of 2x2 or more"},
+    islands = {0, 3, 11, 3, 5, 3, 1, 1},
+    marks = {},
+    fills = {
+      2, 3, 4,
+      6, 9,
+      10, 11, 13, 14,
+      15, 16, 17, 19,
+      21, 24
+    },
+    error_cells = {10, 11, 15, 16},
+    width = 5,
+    height = 5
+  },
+  {
+    lines = {"6/6 you can mark blocks as", "    land to help narrow down", "    the solution"},
+    islands = {0, 3, 11, 3, 5, 3, 1, 1},
+    marks = {5, 7, 8, 10, 22, 23},
+    fills = {
+      1, 2, 3, 4,
+      6, 9,
+      11, 13, 14,
+      15, 16, 17, 19,
+      21, 24
+    },
+    error_cells = {},
+    width = 5,
+    height = 5
+  }
+}
+
+how_to_play_screen = 1
+how_to_play_islands = {}
+
 marks = {}
 checked_cells = {}
 error_cells = {}
@@ -294,6 +387,7 @@ function _init()
   -- load_solution()
   -- check_solution()
   open_menu()
+  -- open_how_to_play()
 end
 
 function _update()
@@ -303,21 +397,41 @@ function _update()
     update_level()
   elseif mode == mode_level_select then
     update_level_select()
+  elseif mode == mode_how_to_play then
+    update_how_to_play()
   end
 end
 
 function _draw()
+  cls()
   if mode == mode_menu then
     draw_menu()
   elseif mode == mode_level then
     draw_level()
   elseif mode == mode_level_select then
     draw_level_select()
+  elseif mode == mode_how_to_play then
+    draw_how_to_play()
   end
+end
+
+-- reset commonly uses variables
+function reset()
+  level = nil
+  level_size = nil
+  level_islands = nil
+  level_duration = nil
+  level_start = nil
+  level_width = nil
+  level_height = nil
+  error_cells = {}
+  marks = {}
+  is_correct = false
 end
 
 -- switch mode to menu
 function open_menu()
+  reset()
   mode = mode_menu
 
   menu_item_count = 0
@@ -329,6 +443,8 @@ end
 
 -- switch mode to level
 function open_level()
+  reset()
+  load_level()
   mode = mode_level
   pointer.x = 0
   pointer.y = 0
@@ -339,32 +455,38 @@ end
 
 -- switch mode to level select
 function open_level_select()
+  reset()
   mode = mode_level_select
   load_level()
 end
 
 -- switch mode to how to play
 function open_how_to_play()
-  -- todo
+  reset()
+  mode = mode_how_to_play
+  how_to_play_screen = 6
+  load_how_to_play_screen()
 end
 
 -- load the level in
 -- performs one-off calculations to set the state of the board
 function load_level()
   level = levels[level_id]
-  level_islands = decompress_islands(level["islands"])
-  level_size = coord_to_index(level["width"] - 1, level["height"] - 1)
+  level_width = level["width"]
+  level_height = level["height"]
+  level_islands = decompress_rle(level["islands"])
+  level_size = coord_to_index(level_width - 1, level_height - 1)
   is_correct = false
   marks = {}
 
-  for x = 0, level["width"] - 1 do
-    for y = 0, level["height"] - 1 do
+  for x = 0, level_width - 1 do
+    for y = 0, level_height - 1 do
       marks[coord_to_index(x, y)] = nil
     end
   end
 
-  local board_width = level["width"] * cell_width
-  local board_height = level["height"] * cell_height
+  local board_width = level_width * cell_width
+  local board_height = level_height * cell_height
 
   offset_x = (screen_width - board_width) / 2
   offset_y = (screen_height - board_height) / 2
@@ -374,19 +496,19 @@ function load_level()
 
   board_offset_x = offset_x - border_width
   board_offset_y = offset_y - border_height
-  map_screen_x = level["width"] + 2
-  map_screen_y = level["height"] + 2
+  map_screen_x = level_width + 2
+  map_screen_y = level_height + 2
 
-  build_board()
+  build_board(level_width, level_height)
 end
 
--- load the islands from the run-length encoded data
-function decompress_islands(data)
+-- load the values in from the run-length encoded data
+function decompress_rle(data)
   local idx = 0
   local x, y = nil, nil
   local count = nil
   local value = nil
-  local islands = {}
+  local values = {}
 
   for i = 1, #data / 2 do
     count = data[i * 2 - 1]
@@ -396,10 +518,10 @@ function decompress_islands(data)
     x, y = index_to_coord(idx)
     idx += 1
 
-    add(islands, {value, x, y})
+    add(values, {value, x, y})
   end
 
-  return islands
+  return values
 end
 
 -- initialise the level menu items
@@ -414,8 +536,8 @@ end
 function load_solution()
   marks = {}
 
-  for x = 0,level["width"] - 1 do
-    for y = 0,level["height"] - 1 do
+  for x = 0,level_width - 1 do
+    for y = 0,level_height - 1 do
       marks[coord_to_index(x, y)] = nil
     end
   end
@@ -511,8 +633,8 @@ function check_sea()
 
   local sea_marks = {}
 
-  for x = 0,level["width"] - 1 do
-    for y = 0,level["height"] - 1 do
+  for x = 0,level_width - 1 do
+    for y = 0,level_height - 1 do
       if (is_cell_filled(x, y)) then
         add(sea_marks, {x, y})
         sea_mark_count += 1
@@ -608,7 +730,7 @@ end
 
 -- return true if the co-ordinates are within the level boundary
 function is_cell_valid(x, y)
-  if x >= 0 and x < level["width"] and y >= 0 and y < level["height"] then
+  if x >= 0 and x < level_width and y >= 0 and y < level_height then
     return true
   end
   return false
@@ -641,26 +763,26 @@ function mark_cell_error(x, y)
 end
 
 -- build the board in the map
-function build_board()
+function build_board(width, height)
   -- draw the border
-  for x = 1, level["width"] do
+  for x = 1, width do
     mset(x, 0, spr_border_top)
-    mset(x, level["height"] + 1, spr_border_bottom)
+    mset(x, height + 1, spr_border_bottom)
   end
-  for y = 1, level["height"] do
+  for y = 1, height do
     mset(0, y, spr_border_left)
-    mset(level["width"] + 1, y, spr_border_right)
+    mset(width + 1, y, spr_border_right)
   end
 
   -- draw the corners
   mset(0, 0, spr_border_top_left)
-  mset(level["width"] + 1, 0, spr_border_top_right)
-  mset(level["width"] + 1, level["height"] + 1, spr_border_bottom_right)
-  mset(0, level["height"] + 1, spr_border_bottom_left)
+  mset(width + 1, 0, spr_border_top_right)
+  mset(width + 1, height + 1, spr_border_bottom_right)
+  mset(0, height + 1, spr_border_bottom_left)
 
   -- fill the board
-  for x = 1, level["width"] do
-    for y = 1, level["height"] do
+  for x = 1, width do
+    for y = 1, height do
       mset(x, y, spr_board_background)
     end
   end
@@ -708,8 +830,8 @@ function update_level_state()
   end
 
   -- limit the range
-  pointer.x = clamp(pointer.x, 0, level["width"] - 1)
-  pointer.y = clamp(pointer.y, 0, level["height"] - 1)
+  pointer.x = clamp(pointer.x, 0, level_width - 1)
+  pointer.y = clamp(pointer.y, 0, level_height - 1)
 
   if changed then
     -- reset the counter so the pointer is visible
@@ -774,12 +896,68 @@ function update_level_select()
 
   if btnp(k_confirm) then
     open_level()
+  elseif btnp(k_cancel) then
+    open_menu()
   end
+end
+
+-- read the how to play inputs
+function update_how_to_play()
+  local tmp_screen = how_to_play_screen
+
+  if btnp(k_confirm) or btnp(k_cancel) then
+    open_menu()
+  elseif btnp(k_left) then
+    how_to_play_screen -= 1
+  elseif btnp(k_right) then
+    how_to_play_screen += 1
+  end
+
+  how_to_play_screen = clamp(how_to_play_screen, 1, #how_to_play_screens)
+
+  if how_to_play_screen ~= tmp_screen then
+    load_how_to_play_screen()
+  end
+end
+
+-- load in the current page of the how to play section
+function load_how_to_play_screen()
+  local screen = how_to_play_screens[how_to_play_screen]
+
+  marks = {}
+  error_cells = {}
+  level_width = screen["width"]
+  level_height = screen["height"]
+
+  for i = 1, #screen["fills"] do
+    marks[screen["fills"][i]] = spr_fill
+  end
+
+  for i = 1, #screen["marks"] do
+    marks[screen["marks"][i]] = spr_mark
+  end
+
+  for i = 1, #screen["error_cells"] do
+    error_cells[screen["error_cells"][i]] = true
+  end
+
+  how_to_play_islands = decompress_rle(screen["islands"])
+
+  local board_width = screen["width"] * cell_width
+
+  offset_x = (screen_width - board_width) / 2
+  offset_y = 50
+
+  board_offset_x = offset_x - border_width
+  board_offset_y = offset_y - border_height
+  map_screen_x = screen["width"] + 2
+  map_screen_y = screen["height"] + 2
+
+  build_board(screen["width"], screen["height"])
 end
 
 -- draw the menu
 function draw_menu()
-  cls()
   rectfill(0, 0, 127, 127, bg)
 
   for idx, menu_item in pairs(menu_items) do
@@ -803,7 +981,6 @@ end
 
 -- draw the level, the board and the markings
 function draw_level()
-  cls()
   rectfill(0, 0, screen_width - 1, screen_height - 1, bg)
 
   map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
@@ -825,7 +1002,6 @@ end
 
 -- draw the level select screen
 function draw_level_select()
-  cls()
   rectfill(0, 0, 127, 127, bg)
   rectfill(0, 0, screen_width - 1, cell_height + 6, bar_bg)
   map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
@@ -880,6 +1056,32 @@ function draw_success()
   rounded_rectfill(x, y, width, height, success_bg)
 
   print(text, x + menu_padding, y + menu_padding, success_fg)
+end
+
+-- draw the how to play screen
+function draw_how_to_play()
+  local y = 4
+  local lines = how_to_play_screens[how_to_play_screen].lines
+  local col = nil
+
+  rectfill(0, 0, 127, 127, bg)
+  map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
+
+  for cell in all(how_to_play_islands) do
+    col = cell_has_error(cell[2], cell[3]) and number_error_col or number_col
+    print_number(cell[1], cell[2] * cell_width + offset_x, cell[3] * cell_width + offset_y, col)
+  end
+
+  draw_marks()
+  draw_numbers()
+
+  for i = 1, #lines do
+    print_shadow(lines[i], 4, y, bar_fg, bar_fg_shadow)
+    y += cell_height
+  end
+
+  print_shadow("🅾️/❎back", 4, 119, bar_fg, bar_fg_shadow)
+  print_shadow("⬅️prev ➡️next", 71, 119, bar_fg, bar_fg_shadow)
 end
 
 -- return the time in hours, minutes and seconds
@@ -937,8 +1139,8 @@ function draw_marks()
   local idx = nil
   local sprite = nil
 
-  for x = 0, level["width"] - 1 do
-    for y = 0, level["height"] - 1 do
+  for x = 0, level_width - 1 do
+    for y = 0, level_height - 1 do
       idx = coord_to_index(x, y)
 
       if (marks[idx]) then
@@ -1035,15 +1237,15 @@ end
 
 -- convert the x and y coordinates into an index
 function coord_to_index(x, y)
-  return level["width"] * y + x
+  return level_width * y + x
 end
 
 -- convert the index into x and y coordinates
 function index_to_coord(idx)
   local x, y = nil, nil
 
-  y = flr(idx / level["width"])
-  x = idx - y * level["width"]
+  y = flr(idx / level_width)
+  x = idx - y * level_width
 
   return x, y
 end
