@@ -1109,6 +1109,10 @@ function update_level_select()
     level_id -= 1
   elseif btnp(k_right) then
     level_id += 1
+  elseif btnp(k_up) then
+    level_id += 5
+  elseif btnp(k_down) then
+    level_id -= 5
   end
 
   level_id = clamp(level_id, 1, #levels)
