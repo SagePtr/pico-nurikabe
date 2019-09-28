@@ -757,6 +757,7 @@ function check_solution()
   board.errors = {}
   board.correct = true
 
+  draw_checking()
   check_islands()
   check_sea()
 
@@ -1254,6 +1255,17 @@ end
 -- draw the success window
 function draw_success()
   local text = "level complete!"
+  local width = #text * char_width + menu_padding
+  local height = menu_item_height
+  local x = flr((screen_width - width) / 2)
+  local y = flr((screen_height - height) / 2)
+
+  print_border(text, x, y, success_fg, success_bg)
+end
+
+-- draw the "checking..." window
+function draw_checking()
+  local text = "checking..."
   local width = #text * char_width + menu_padding
   local height = menu_item_height
   local x = flr((screen_width - width) / 2)
