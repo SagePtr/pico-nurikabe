@@ -5,7 +5,6 @@ __lua__
 -- sprites --
 -------------
 
-spr_board_border = 1
 spr_board_background = 2
 spr_pointer = 3
 spr_mark = 4
@@ -44,19 +43,19 @@ k_cancel = 5
 -------------
 
 col_black = 0
-col_darkblue = 1
+-- col_darkblue = 1
 col_lilac = 2
 col_darkgreen = 3
-col_brown = 4
+-- col_brown = 4
 col_grey = 5
 col_lightgrey = 6
 col_white = 7
 col_red = 8
-col_orange = 9
-col_yellow = 10
-col_lightgreen = 11
-col_lightblue = 12
-col_lightpurple = 13
+-- col_orange = 9
+-- col_yellow = 10
+-- col_lightgreen = 11
+-- col_lightblue = 12
+-- col_lightpurple = 13
 col_pink = 14
 col_tan = 15
 col_trans = col_darkgreen
@@ -89,13 +88,13 @@ pointer_max_x = 110
 pointer_max_y = 100
 offset_x_min = 24
 offset_y_min = 32
-bar_bg = col_darkblue
-bar_fg = col_white
-bar_fg_shadow = col_black
+shadow_box_bg = col_pink
+shadow_box_border = col_lilac
+shadow_box_text_col = col_white
+shadow_box_text_border_col = col_lilac
 bottom_bar_height = 10
-success_bg = col_tan
-success_fg = col_black
-success_shadow = col_lightgrey
+success_bg = col_black
+success_fg = col_white
 
 -- modes --
 -----------
@@ -399,8 +398,9 @@ function _init()
   -- open_level()
   -- load_solution()
   -- check_solution()
-  -- open_menu()
-  open_how_to_play()
+  open_menu()
+  -- open_level_select()
+  -- open_how_to_play()
 end
 
 function _update()
@@ -1022,12 +1022,12 @@ function draw_level()
   foreach(actor, draw_actor)
 
   -- draw the ui over the top of the board
-  rectfill(0, 0, screen_width - 1, cell_height + 6, bar_bg)
-  rectfill(0, screen_height - cell_height - 3, screen_width - 1, screen_height - 1, bar_bg)
+  draw_shadow_box(2, 4, 125, 11)
+  draw_shadow_box(2, screen_height - 10, 125, 11)
 
   draw_level_name()
   draw_timer()
-  print_shadow("🅾️mark ❎fill", 71, 120, bar_fg, bar_fg_shadow)
+  print_border("🅾️mark ❎fill", 71, 118, shadow_box_text_col, shadow_box_text_border_col)
 
   if is_correct then draw_success() end
 end
@@ -1035,7 +1035,7 @@ end
 -- draw the level select screen
 function draw_level_select()
   rectfill(0, 0, 127, 127, bg)
-  rectfill(0, 0, screen_width - 1, cell_height + 6, bar_bg)
+  draw_shadow_box(2, 4, 125, 11)
   map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
   draw_numbers()
   draw_level_name()
@@ -1057,15 +1057,15 @@ function draw_level_name()
     diff = "hard"
   end
 
-  print_shadow("level "..tostr(level_id), 5, 5, bar_fg, bar_fg_shadow)
-  print_shadow(diff, screen_width - #diff*char_width - 5, 5, bar_fg)
+  print_border("level "..tostr(level_id), 4, 4, shadow_box_text_col, shadow_box_border)
+  print_border(diff, screen_width - #diff*char_width - 3, 4, shadow_box_text_col, shadow_box_border)
 end
 
 -- draw that the level is complete
 function draw_level_complete()
   local text = "completed"
 
-  print_shadow(text, flr((screen_width - #text*char_width) / 2), 5, bar_fg)
+  print_border(text, flr((screen_width - #text*char_width) / 2), 4, shadow_box_text_col, shadow_box_border)
 end
 
 -- draw the timer
@@ -1073,7 +1073,7 @@ function draw_timer()
   local hours, minutes, seconds = split_time(level_duration)
   local text = zero_pad(hours)..":"..zero_pad(minutes)..":"..zero_pad(seconds)
 
-  print_shadow(text, flr((screen_width - #text*char_width) / 2), 5, bar_fg, bar_fg_shadow)
+  print_border(text, flr((screen_width - #text*char_width) / 2), 4, shadow_box_text_col, shadow_box_border)
 end
 
 -- draw the success window
@@ -1084,10 +1084,7 @@ function draw_success()
   local x = flr((screen_width - width) / 2)
   local y = flr((screen_height - height) / 2)
 
-  rounded_rectfill(x + 1, y + 1, width, height, success_shadow)
-  rounded_rectfill(x, y, width, height, success_bg)
-
-  print(text, x + menu_padding, y + menu_padding, success_fg)
+  print_border(text, x, y, success_fg, success_bg)
 end
 
 -- draw the how to play screen
@@ -1106,19 +1103,16 @@ function draw_how_to_play()
 
   draw_marks()
   draw_numbers()
-
-  rounded_rectfill(2, y - 2, 124, #lines * cell_height, col_black)
-  rounded_rectfill(3, y - 1, 122, #lines * cell_height - 2, col_tan)
+  draw_shadow_box(2, y, 125, #lines * cell_height + 3)
 
   for i = 1, #lines do
-    -- print_shadow(lines[i], 4, y, col_tan, col_white)
-    print_shadow(lines[i], 5, y, col_black, col_white)
-    -- print(lines[i], 5, y, col_black)
+    print_border(lines[i], 4, y, shadow_box_text_col, shadow_box_text_border_col)
     y += cell_height
   end
 
-  print_shadow("🅾️/❎back", 4, 119, bar_fg, bar_fg_shadow)
-  print_shadow("⬅️prev ➡️next", 71, 119, bar_fg, bar_fg_shadow)
+  draw_shadow_box(2, 118, 125, 11)
+  print_border("🅾️/❎back", 4, 118, shadow_box_text_col, shadow_box_text_border_col)
+  print_border("⬅️prev ➡️next", 71, 118, shadow_box_text_col, shadow_box_text_border_col)
 end
 
 -- return the time in hours, minutes and seconds
@@ -1255,10 +1249,27 @@ function print_shadow(text, x, y, fg, bg)
   print(text, x, y, fg)
 end
 
+-- print the text with a border
+function print_border(text, x, y, fg, bg)
+  for i = x - 1, x + 1 do
+    for j = y - 1, y + 1 do
+      print(text, i, j, bg)
+    end
+  end
+
+  print(text, x, y, fg)
+end
+
 -- draw a rounded rectangle
 function rounded_rectfill(x, y, width, height, bg)
   rectfill(x, y + 1, x + width, y + height - 1, bg) -- short
   rectfill(x + 1, y, x + width - 1, y + height, bg) -- tall
+end
+
+-- draw a shadow box
+function draw_shadow_box(x, y, width, height)
+  rounded_rectfill(x - 1, y - 3, width, height, shadow_box_border)
+  rounded_rectfill(x, y - 2, width - 2, height - 3, shadow_box_bg)
 end
 
 -- exclusive or
@@ -1343,14 +1354,14 @@ function tostring(any)
 end
 
 __gfx__
-7777777755555555666666693777777333333333333333333333333333333333a7994333aaaaaaaa3334997a33333333a79943333334997a3333333300000000
-77777777666666656f7f7f797333333733333333355555533888888333333333a7994333777777773334997a3333333379994333333499973333333300000000
-7777777765d5d5d567f7f7f97333333733333333355555533888888333333333a7994333999999993334997a3333333399943333333349993333333300000000
-777777776d5d5d556f7f7f797333333733355333355555533888888344444444a7994333999999993334997a4433333399433333333334993333334400000000
-7777777765d5d5d567f7f7f97333333733355333355555533888888399999999a7994333444444443334997a9943333344333333333333443333349900000000
-777777776d5d5d556f7f7f797333333733333333355555533888888399999999a7994333333333333334997a9994333333333333333333333333499900000000
-7777777765d5d5d567f7f7f973333337333333333555555338888883aaaaaaaaa7994333333333333334997a7999433333333333333333333334999a00000000
-777777776d5d5d55999999993777777333333333333333333333333377777777a7994333333333333334997aa79943333333333333333333333499a700000000
+77777777555555556666666e37777773333333333333333333333333333333337fee2333777777773332ee7f33333333f7ee23333332ee7f3333333300000000
+77777777666666656f7f7f7e73333337333333333222222338888883333333337fee2333ffffffff3332ee7f333333337eee23333332eee73333333300000000
+7777777765d5d5d567f7f7fe73333337333333333222222338888883333333337fee2333eeeeeeee3332ee7f33333333eee2333333332eee3333333300000000
+777777776d5d5d556f7f7f7e73333337333223333222222338888883222222227fee2333eeeeeeee3332ee7f22333333ee233333333332ee3333332200000000
+7777777765d5d5d567f7f7fe73333337333223333222222338888883eeeeeeee7fee2333222222223332ee7fee2333332233333333333322333332ee00000000
+777777776d5d5d556f7f7f7e73333337333333333222222338888883eeeeeeee7fee2333333333333332ee7feee23333333333333333333333332eee00000000
+7777777765d5d5d567f7f7fe73333337333333333222222338888883ffffffff7fee2333333333333332ee7f7eee233333333333333333333332eee700000000
+777777776d5d5d55eeeeeeee37777773333333333333333333333333777777777fee2333333333333332ee7ff7ee233333333333333333333332ee7f00000000
 77777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777
 77777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777
 77777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777
