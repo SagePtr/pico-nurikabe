@@ -1229,6 +1229,10 @@ function draw_level_select()
   if get_level_complete(level_id) then
     draw_level_complete()
   end
+
+  draw_shadow_box(2, 118, 125, 11)
+  print_border("🅾️start ❎back", 4, 118, shadow_box_text_col, shadow_box_text_border_col)
+  print_border("⬅️prev ➡️next", 71, 118, shadow_box_text_col, shadow_box_text_border_col)
 end
 
 -- draw the label for the level
