@@ -282,6 +282,48 @@ levels = {
     islands = {1, 3, 1, 2, 3, 3, 10, 3, 2, 2, 3, 2, 24, 4, 4, 5, 1, 1, 3, 5, 14, 5, 2, 3, 11, 2, 3, 5, 4, 3, 2, 1, 4, 1, 10, 3, 10, 2, 3, 3, 2, 2, 12, 2, 12, 4, 3, 3, 2, 2, 4, 2, 2, 4},
     solution = {}
   },
+  {
+    diff = diff_easy,
+    width = 10,
+    height = 18,
+    islands = {0, 6, 5, 3, 13, 3, 5, 4, 6, 4, 1, 3, 4, 2, 8, 2, 13, 5, 3, 3, 1, 3, 2, 4, 10, 3, 23, 2, 2, 6, 12, 2, 1, 3, 3, 3, 16, 4, 7, 2, 6, 2, 5, 2, 4, 3, 5, 6},
+    solution = {}
+  },
+  {
+    diff = diff_easy,
+    width = 10,
+    height = 18,
+    islands = {1, 4, 1, 3, 2, 2, 1, 3, 19, 6, 3, 2, 14, 2, 4, 5, 1, 2, 1, 4, 11, 2, 13, 2, 1, 3, 3, 3, 13, 3, 4, 3, 5, 2, 6, 3, 6, 4, 8, 3, 7, 2, 17, 2, 8, 6, 3, 6, 1, 3},
+    solution = {}
+  },
+  {
+    diff = diff_easy,
+    width = 10,
+    height = 18,
+    islands = {0, 9, 1, 3, 3, 5, 19, 6, 13, 5, 19, 3, 3, 4, 1, 3, 20, 1, 1, 4, 0, 3, 1, 1, 20, 4, 1, 5, 3, 9, 19, 7, 13, 7, 19, 3, 3, 2, 1, 1},
+    solution = {}
+  },
+  {
+    diff = diff_easy,
+    width = 10,
+    height = 18,
+    islands = {9, 7, 10, 4, 10, 4, 1, 3, 4, 3, 5, 4, 2, 3, 16, 8, 8, 3, 22, 1, 4, 2, 3, 5, 6, 6, 18, 3, 2, 5, 2, 1, 2, 3, 2, 2, 4, 3, 21, 10},
+    solution = {}
+  },
+  {
+    diff = diff_easy,
+    width = 10,
+    height = 18,
+    islands = {0, 3, 13, 3, 1, 3, 3, 1, 15, 3, 5, 2, 14, 9, 2, 1, 3, 5, 19, 9, 12, 6, 1, 4, 20, 3, 1, 5, 2, 10, 24, 9, 14, 5, 13, 4},
+    solution = {}
+  },
+  {
+    diff = diff_normal,
+    width = 10,
+    height = 18,
+    islands = {0, 4, 1, 6, 6, 3, 16, 2, 2, 3, 7, 2, 12, 5, 7, 1, 2, 3, 3, 4, 14, 1, 3, 2, 8, 3, 3, 3, 1, 4, 0, 4, 7, 4, 3, 2, 12, 3, 6, 3, 1, 4, 14, 2, 0, 4, 7, 3, 5, 1, 7, 1, 5, 4},
+    solution = {}
+  }
 }
 
 -- tutorial screens --
@@ -387,11 +429,12 @@ function _init()
   palt(col_trans, true)
   pointer = make_pointer()
 
-  -- load_level()
-  -- open_level()
+  debug_print("level count is "..#levels)
+  level_id = #levels
+  open_level()
   -- load_solution()
   -- check_solution()
-  open_menu()
+  -- open_menu()
   -- open_level_select()
   -- open_how_to_play()
 end
