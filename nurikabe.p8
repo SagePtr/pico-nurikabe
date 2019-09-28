@@ -116,16 +116,10 @@ diff_hard = 3
 
 actor = {}
 pointer = nil
-level = nil
 level_id = 1
-level_size = nil
-level_islands = nil
-level_duration = nil
-level_start = nil
-level_width = nil
-level_height = nil
 offset_x = nil
 offset_y = nil
+board = nil
 board_offset_x = nil
 board_offset_y = nil
 map_screen_x = nil
@@ -135,6 +129,9 @@ menu_item_count = 0
 menu_item_height = 8
 menu_item_gap = 4
 menu_idx = 1
+
+-- levels --
+------------
 
 levels = {
   {
@@ -287,6 +284,9 @@ levels = {
   },
 }
 
+-- tutorial screens --
+----------------------
+
 how_to_play_screens = {
   {
     lines = {"1/6 in nurikabe you must solve", "    which blocks are islands", "    and which are part of", "    the sea"},
@@ -375,13 +375,6 @@ how_to_play_screens = {
 }
 
 how_to_play_screen = 1
-how_to_play_islands = {}
-
-marks = {}
-checked_cells = {}
-error_cells = {}
-is_island_connected = false
-is_correct = false
 
 -- entry point --
 -----------------
@@ -428,23 +421,8 @@ function _draw()
   end
 end
 
--- reset commonly uses variables
-function reset()
-  level = nil
-  level_size = nil
-  level_islands = nil
-  level_duration = nil
-  level_start = nil
-  level_width = nil
-  level_height = nil
-  error_cells = {}
-  marks = {}
-  is_correct = false
-end
-
 -- switch mode to menu
 function open_menu()
-  reset()
   mode = mode_menu
 
   menu_item_count = 0
@@ -456,26 +434,23 @@ end
 
 -- switch mode to level
 function open_level()
-  reset()
   load_level()
   mode = mode_level
   pointer.x = 0
   pointer.y = 0
-  level_start = time()
-  level_duration = 0
+  board.start = time()
+  board.duration = 0
   init_menu()
 end
 
 -- switch mode to level select
 function open_level_select()
-  reset()
   mode = mode_level_select
   load_level()
 end
 
 -- switch mode to how to play
 function open_how_to_play()
-  reset()
   mode = mode_how_to_play
   how_to_play_screen = 1
   load_how_to_play_screen()
@@ -484,35 +459,21 @@ end
 -- load the level in
 -- performs one-off calculations to set the state of the board
 function load_level()
-  level = levels[level_id]
-  level_width = level["width"]
-  level_height = level["height"]
-  level_islands = decompress_rle(level["islands"])
-  level_size = coord_to_index(level_width - 1, level_height - 1)
-  is_correct = false
-  marks = {}
+  local level = levels[level_id]
 
-  for x = 0, level_width - 1 do
-    for y = 0, level_height - 1 do
-      marks[coord_to_index(x, y)] = nil
-    end
+  board = make_board(level.width, level.height, level.islands)
+  board.solution = level.solution
+  board.diff = "unknown"
+
+  if level.diff == diff_easy then
+    board.diff = "easy"
+  elseif level.diff == diff_normal then
+    board.diff = "normal"
+  elseif level.diff == diff_hard then
+    board.diff = "hard"
   end
 
-  local board_width = level_width * cell_width
-  local board_height = level_height * cell_height
-
-  offset_x = (screen_width - board_width) / 2
-  offset_y = (screen_height - board_height) / 2
-
-  offset_x = max(offset_x, offset_x_min)
-  offset_y = max(offset_y, offset_y_min)
-
-  board_offset_x = offset_x - border_width
-  board_offset_y = offset_y - border_height
-  map_screen_x = level_width + 2
-  map_screen_y = level_height + 2
-
-  build_board(level_width, level_height)
+  build_board()
 end
 
 -- load the values in from the run-length encoded data
@@ -547,41 +508,41 @@ end
 
 -- load the solution to the current level in
 function load_solution()
-  marks = {}
+  board.marks = {}
 
-  for x = 0,level_width - 1 do
-    for y = 0,level_height - 1 do
-      marks[coord_to_index(x, y)] = nil
+  for x = 0, board.width - 1 do
+    for y = 0, board.height - 1 do
+      board.marks[coord_to_index(x, y)] = nil
     end
   end
 
-  for cell in all(level["solution"]) do
-    marks[coord_to_index(cell[1], cell[2])] = spr_fill
+  for cell in all(board.solution) do
+    board.marks[coord_to_index(cell[1], cell[2])] = spr_fill
   end
 end
 
 -- check whether the current solution is correct
 function check_solution()
-  error_cells = {}
-  is_correct = true
+  board.errors = {}
+  board.correct = true
 
   check_islands()
   check_sea()
 
-  if is_correct then
+  if board.correct then
     pointer.show = 0
     sfx(sfx_correct, 0)
   else
     sfx(sfx_wrong, 0)
   end
 
-  set_level_complete(level_id, is_correct)
+  set_level_complete(level_id, board.correct)
 end
 
 -- check each island contains the required number of cells and does
 -- not connect to any other islands
 function check_islands()
-  for k, v in pairs(level_islands) do
+  for k, v in pairs(board.islands) do
     check_island(k, v[1], v[2], v[3])
   end
 end
@@ -591,8 +552,8 @@ function check_island(idx, count, x, y)
   debug_print("checking island "..tostr(idx).." at "..tostr(x)..","..tostr(y).." should have "..tostr(count))
 
   local actual_count = 1
-  is_island_connected = false
-  checked_cells = {}
+  board.has_pools = false
+  board.checked = {}
 
   mark_cell_checked(x, y)
 
@@ -603,13 +564,13 @@ function check_island(idx, count, x, y)
 
   if actual_count ~= count then
     debug_print("count was "..tostr(actual_count)..", should be "..tostr(count))
-    is_correct = false
+    board.correct = false
     mark_cell_error(x, y)
   end
 
-  if is_island_connected then
+  if board.has_pools then
     debug_print("island hits another island")
-    is_correct = false
+    board.correct = false
   end
 end
 
@@ -626,7 +587,7 @@ function check_island_cell(x, y)
 
   if (is_cell_number(x, y)) then
     debug_print("***hit another island***")
-    is_island_connected = true
+    board.has_pools = true
     mark_cell_error(x, y)
     return 0
   end
@@ -646,13 +607,13 @@ end
 -- 2. do not contain any regions of 2x2 or greater
 function check_sea()
   -- reset the variables we'll use to check the solution
-  checked_cells = {}
+  board.checked = {}
   sea_mark_count = 0
 
   local sea_marks = {}
 
-  for x = 0,level_width - 1 do
-    for y = 0,level_height - 1 do
+  for x = 0, board.width - 1 do
+    for y = 0, board.height - 1 do
       if (is_cell_filled(x, y)) then
         add(sea_marks, {x, y})
         sea_mark_count += 1
@@ -664,7 +625,7 @@ function check_sea()
 
   if sea_mark_count == 0 then
     debug_print("no marks")
-    is_correct = false
+    board.correct = false
     return
   end
 
@@ -676,7 +637,7 @@ function check_sea()
   debug_print("mark contains "..tostr(count).." cells")
 
   if count ~= sea_mark_count then
-    is_correct = false
+    board.correct = false
   end
 
   debug_print("checking marks do not contain regions of 2x2 or greater")
@@ -727,7 +688,7 @@ function check_size(x, y)
       and is_cell_valid_and_filled(x + 1, y + 1))
   then
     debug_print("found 2x2 at "..tostr(x)..","..tostr(y))
-    is_correct = false
+    board.correct = false
 
     mark_cell_error(x, y)
     mark_cell_error(x + 1, y)
@@ -738,17 +699,17 @@ end
 
 -- mark a cell as checked
 function mark_cell_checked(x, y)
-  checked_cells[coord_to_index(x, y)] = true
+  board.checked[coord_to_index(x, y)] = true
 end
 
 -- return true if the cell has already been checked
 function is_cell_checked(x, y)
-  return checked_cells[coord_to_index(x, y)] == true
+  return board.checked[coord_to_index(x, y)] == true
 end
 
 -- return true if the co-ordinates are within the level boundary
 function is_cell_valid(x, y)
-  if x >= 0 and x < level_width and y >= 0 and y < level_height then
+  if x >= 0 and x < board.width and y >= 0 and y < board.height then
     return true
   end
   return false
@@ -756,7 +717,7 @@ end
 
 -- return true if the co-ordinates are a number
 function is_cell_number(x, y)
-  for cell in all(level_islands) do
+  for cell in all(board.islands) do
     if (cell[2] == x and cell[3] == y) then
       return true
     end
@@ -766,7 +727,7 @@ end
 
 -- return true if the co-ordinates have been filled
 function is_cell_filled(x, y)
-  return marks[coord_to_index(x, y)] == spr_fill
+  return board.marks[coord_to_index(x, y)] == spr_fill
 end
 
 -- return true if the co-ordinates are valid and have been filled
@@ -777,30 +738,30 @@ end
 -- mark the co-ordinates as having an error
 function mark_cell_error(x, y)
   debug_print("flagging "..tostr(x)..","..tostr(y).." as error")
-  error_cells[coord_to_index(x, y)] = true
+  board.errors[coord_to_index(x, y)] = true
 end
 
 -- build the board in the map
-function build_board(width, height)
+function build_board()
   -- draw the border
-  for x = 1, width do
+  for x = 1, board.width do
     mset(x, 0, spr_border_top)
-    mset(x, height + 1, spr_border_bottom)
+    mset(x, board.height + 1, spr_border_bottom)
   end
-  for y = 1, height do
+  for y = 1, board.height do
     mset(0, y, spr_border_left)
-    mset(width + 1, y, spr_border_right)
+    mset(board.width + 1, y, spr_border_right)
   end
 
   -- draw the corners
   mset(0, 0, spr_border_top_left)
-  mset(width + 1, 0, spr_border_top_right)
-  mset(width + 1, height + 1, spr_border_bottom_right)
-  mset(0, height + 1, spr_border_bottom_left)
+  mset(board.width + 1, 0, spr_border_top_right)
+  mset(board.width + 1, board.height + 1, spr_border_bottom_right)
+  mset(0, board.height + 1, spr_border_bottom_left)
 
   -- fill the board
-  for x = 1, width do
-    for y = 1, height do
+  for x = 1, board.width do
+    for y = 1, board.height do
       mset(x, y, spr_board_background)
     end
   end
@@ -823,7 +784,7 @@ end
 
 -- update the level state
 function update_level()
-  if is_correct then
+  if board.correct then
     update_level_complete_state()
   else
     update_level_state()
@@ -850,8 +811,8 @@ function update_level_state()
   end
 
   -- limit the range
-  local clamp_x = clamp(pointer.x, 0, level_width - 1)
-  local clamp_y = clamp(pointer.y, 0, level_height - 1)
+  local clamp_x = clamp(pointer.x, 0, board.width - 1)
+  local clamp_y = clamp(pointer.y, 0, board.height - 1)
 
   -- play a sound if they try to go off the board
   if clamp_x ~= pointer.x or clamp_y ~= pointer.y then
@@ -895,11 +856,11 @@ function update_level_state()
       toggle_mark(spr_fill)
       sfx(sfx_fill, 0)
     end
-    error_cells = {}
+    board.errors = {}
   end
 
   -- update how much time has been spent
-  if (is_correct == false) then level_duration = time() - level_start end
+  if (board.correct == false) then board.duration = time() - board.start end
 end
 
 -- read the level complete inputs and update the state
@@ -955,36 +916,25 @@ end
 function load_how_to_play_screen()
   local screen = how_to_play_screens[how_to_play_screen]
 
-  marks = {}
-  error_cells = {}
-  level_width = screen["width"]
-  level_height = screen["height"]
+  board = make_board(screen.width, screen.height, screen.islands)
 
-  for i = 1, #screen["fills"] do
-    marks[screen["fills"][i]] = spr_fill
+  for i = 1, #screen.fills do
+    board.marks[screen.fills[i]] = spr_fill
   end
 
-  for i = 1, #screen["marks"] do
-    marks[screen["marks"][i]] = spr_mark
+  for i = 1, #screen.marks do
+    board.marks[screen.marks[i]] = spr_mark
   end
 
-  for i = 1, #screen["error_cells"] do
-    error_cells[screen["error_cells"][i]] = true
+  for i = 1, #screen.error_cells do
+    board.errors[screen.error_cells[i]] = true
   end
 
-  how_to_play_islands = decompress_rle(screen["islands"])
-
-  local board_width = screen["width"] * cell_width
-
-  offset_x = (screen_width - board_width) / 2
+  -- override the offset
   offset_y = 50
-
-  board_offset_x = offset_x - border_width
   board_offset_y = offset_y - border_height
-  map_screen_x = screen["width"] + 2
-  map_screen_y = screen["height"] + 2
 
-  build_board(screen["width"], screen["height"])
+  build_board()
 end
 
 -- draw the menu
@@ -1029,7 +979,7 @@ function draw_level()
   draw_timer()
   print_border("🅾️mark ❎fill", 71, 118, shadow_box_text_col, shadow_box_text_border_col)
 
-  if is_correct then draw_success() end
+  if board.correct then draw_success() end
 end
 
 -- draw the level select screen
@@ -1047,18 +997,8 @@ end
 
 -- draw the label for the level
 function draw_level_name()
-  local diff = "unknown"
-
-  if level["diff"] == diff_easy then
-    diff = "easy"
-  elseif level["diff"] == diff_normal then
-    diff = "normal"
-  elseif level["diff"] == diff_hard then
-    diff = "hard"
-  end
-
   print_border("level "..tostr(level_id), 4, 4, shadow_box_text_col, shadow_box_border)
-  print_border(diff, screen_width - #diff*char_width - 3, 4, shadow_box_text_col, shadow_box_border)
+  print_border(board.diff, screen_width - #board.diff*char_width - 3, 4, shadow_box_text_col, shadow_box_border)
 end
 
 -- draw that the level is complete
@@ -1070,7 +1010,7 @@ end
 
 -- draw the timer
 function draw_timer()
-  local hours, minutes, seconds = split_time(level_duration)
+  local hours, minutes, seconds = split_time(board.duration)
   local text = zero_pad(hours)..":"..zero_pad(minutes)..":"..zero_pad(seconds)
 
   print_border(text, flr((screen_width - #text*char_width) / 2), 4, shadow_box_text_col, shadow_box_border)
@@ -1096,7 +1036,7 @@ function draw_how_to_play()
   rectfill(0, 0, 127, 127, bg)
   map(0, 0, board_offset_x, board_offset_y, map_screen_x, map_screen_y)
 
-  for cell in all(how_to_play_islands) do
+  for cell in all(board.islands) do
     col = cell_has_error(cell[2], cell[3]) and number_error_col or number_col
     print_number(cell[1], cell[2] * cell_width + offset_x, cell[3] * cell_width + offset_y, col)
   end
@@ -1138,10 +1078,10 @@ end
 function toggle_mark(sprite)
   local idx = coord_to_index(pointer.x, pointer.y)
 
-  if (marks[idx] == sprite) then
-    marks[idx] = nil
+  if (board.marks[idx] == sprite) then
+    board.marks[idx] = nil
   else
-    marks[idx] = sprite
+    board.marks[idx] = sprite
   end
 end
 
@@ -1154,7 +1094,7 @@ end
 function draw_numbers()
   local col = nil
 
-  for cell in all(level_islands) do
+  for cell in all(board.islands) do
     col = cell_has_error(cell[2], cell[3]) and number_error_col or number_col
     print_number(cell[1], cell[2] * cell_width + offset_x, cell[3] * cell_width + offset_y, col)
   end
@@ -1162,7 +1102,7 @@ end
 
 -- return true if the co-ordinates have an error
 function cell_has_error(x, y)
-  return error_cells[coord_to_index(x, y)]
+  return board.errors[coord_to_index(x, y)]
 end
 
 -- draw the marks onto the board
@@ -1170,17 +1110,51 @@ function draw_marks()
   local idx = nil
   local sprite = nil
 
-  for x = 0, level_width - 1 do
-    for y = 0, level_height - 1 do
+  for x = 0, board.width - 1 do
+    for y = 0, board.height - 1 do
       idx = coord_to_index(x, y)
 
-      if (marks[idx]) then
-        sprite = marks[idx]
+      if (board.marks[idx]) then
+        sprite = board.marks[idx]
         if (sprite == spr_fill and cell_has_error(x, y)) sprite += 1
         spr(sprite, x * cell_width + offset_x, y * cell_width + offset_y)
       end
     end
   end
+end
+
+-- return a new board entity
+function make_board(width, height, islands)
+  board = {}
+  board.width = width
+  board.height = height
+  board.islands = decompress_rle(islands)
+  board.size = coord_to_index(board.width - 1, board.height - 1)
+  board.marks = {}
+  board.errors = {}
+  board.checked = {}
+  board.duration = nil
+  board.start = nil
+  board.correct = false
+  board.solution = {}
+  board.diff = nil
+
+  -- set the default position
+  local board_width = board.width * cell_width
+  local board_height = board.height * cell_height
+
+  offset_x = (screen_width - board_width) / 2
+  offset_y = (screen_height - board_height) / 2
+
+  offset_x = max(offset_x, offset_x_min)
+  offset_y = max(offset_y, offset_y_min)
+
+  board_offset_x = offset_x - border_width
+  board_offset_y = offset_y - border_height
+  map_screen_x = board.width + 2
+  map_screen_y = board.height + 2
+
+  return board
 end
 
 -- return a new pointer entity
@@ -1273,7 +1247,7 @@ function draw_shadow_box(x, y, width, height)
 end
 
 -- exclusive or
-function xor(a,b)
+function xor(a, b)
   if a and not b then
     return true
   elseif b and not a then
@@ -1285,15 +1259,15 @@ end
 
 -- convert the x and y coordinates into an index
 function coord_to_index(x, y)
-  return level_width * y + x
+  return board.width * y + x
 end
 
 -- convert the index into x and y coordinates
 function index_to_coord(idx)
   local x, y = nil, nil
 
-  y = flr(idx / level_width)
-  x = idx - y * level_width
+  y = flr(idx / board.width)
+  x = idx - y * board.width
 
   return x, y
 end
@@ -1327,27 +1301,27 @@ end
 
 -- converts anything to string, even nested tables
 function tostring(any)
-  if type(any)=="function" then
+  if type(any) == "function" then
     return "function"
   end
-  if any==nil then
+  if any == nil then
     return "nil"
   end
-  if type(any)=="string" then
+  if type(any) == "string" then
     return any
   end
-  if type(any)=="boolean" then
+  if type(any) == "boolean" then
     if any then return "true" end
     return "false"
   end
-  if type(any)=="table" then
+  if type(any) == "table" then
     local str = "{ "
-    for k,v in pairs(any) do
+    for k, v in pairs(any) do
       str=str..tostring(k).."->"..tostring(v).." "
     end
     return str.."}"
   end
-  if type(any)=="number" then
+  if type(any) == "number" then
     return ""..any
   end
   return "unknown" -- should never show
