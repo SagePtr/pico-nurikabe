@@ -66,7 +66,7 @@ col_trans = col_darkgreen
 ---------------
 
 cart_id = "mmawdsley_nurikabe_1"
-debug = 1
+debug = 0
 cell_width = 8
 cell_height = 8
 border_width = cell_width
