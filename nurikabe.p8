@@ -762,6 +762,7 @@ function check_solution()
   errors = {}
   board.correct = true
   board.checking = 1
+  board.has_pools = false
 
   draw_checking()
   check_islands()
@@ -834,7 +835,6 @@ function check_island_cell(x, y)
 
   if (is_cell_number(x, y)) then
     debug_print("***hit another island***")
-    board.has_pools = true
     mark_cell_error(x, y)
     return 0
   end
@@ -883,7 +883,10 @@ function check_sea()
 
   debug_print("mark contains "..tostr(count).." cells")
 
-  if (count ~= sea_mark_count) board.correct = false
+  if count ~= sea_mark_count then
+    board.has_pools = true
+    board.correct = false
+  end
 
   debug_print("checking marks do not contain regions of 2x2 or greater")
 
@@ -1102,6 +1105,7 @@ function update_level_state()
       sfx(sfx_fill, 0)
     end
     board.errors = {}
+    board.has_pools = false
   end
 
   -- update how much time has been spent
@@ -1399,7 +1403,11 @@ function draw_marks()
 
       if (board.marks[idx]) then
         sprite = board.marks[idx]
-        if (sprite == spr_fill and cell_has_error(x, y)) sprite += 1
+
+        if sprite == spr_fill and (board.has_pools or cell_has_error(x, y)) then
+          sprite += 1
+        end
+
         spr(sprite, x * cell_width + offset_x, y * cell_width + offset_y)
       end
     end
@@ -1420,6 +1428,7 @@ function make_board(width, height, islands)
   board.duration = nil
   board.start = nil
   board.correct = false
+  board.has_pools = false
   board.solution = {}
   board.diff = nil
 
