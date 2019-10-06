@@ -119,7 +119,7 @@ diff_hard = 3
 actor = {}
 errors = {}
 pointer = nil
-level_id = 1
+level_id = nil
 offset_x = nil
 offset_y = nil
 board = nil
@@ -626,6 +626,7 @@ function _init()
   -- open_level()
   -- load_solution()
   -- check_solution()
+  set_next_level()
   open_menu()
   -- start_solution_checker()
   -- open_level_select()
@@ -739,7 +740,10 @@ function init_menu()
   menuitem(1, "check solution", start_solution_checker)
   menuitem(2, "level select", open_level_select)
 
-  if (debug == 1) menuitem(3, "show solution", load_solution)
+  if debug == 1 then
+    menuitem(3, "show solution", load_solution)
+    menuitem(4, "mark as complete", cheat_complete_level)
+  end
 end
 
 -- load the solution to the current level in
@@ -1115,6 +1119,7 @@ end
 -- read the level complete inputs and update the state
 function update_level_complete_state()
   if btnp(k_confirm) or btnp(k_cancel) then
+    set_next_level()
     open_level_select()
   end
 end
@@ -1505,6 +1510,34 @@ end
 -- set whether the level has been completed
 function set_level_complete(level_id, is_complete)
   dset(level_id - 1, is_complete and 1 or 0)
+end
+
+-- mark the level as complete
+function cheat_complete_level()
+  board.correct = true
+  board.has_pools = false
+  board.errors = {}
+  board.checking = 0
+
+  pointer.show = 0
+  sfx(sfx_correct, 0)
+
+  set_level_complete(level_id, board.correct)
+end
+
+-- set the next level to the first unsolved level
+function set_next_level()
+  level_id = get_next_level()
+end
+
+-- return the id of the first unsolved level
+function get_next_level()
+  for i = 1, #levels do
+    if get_level_complete(i) == false then
+      return i
+    end
+  end
+  return #levels
 end
 
 -- helper functions --
