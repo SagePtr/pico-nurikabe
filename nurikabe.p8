@@ -1154,7 +1154,11 @@ function update_level_select()
   end
 
   if btnp(k_confirm) then
-    open_level()
+    if is_level_locked(level_id) then
+      sfx(sfx_blocked, 0)
+    else
+      open_level()
+    end
   elseif btnp(k_cancel) then
     open_menu()
   end
@@ -1260,7 +1264,9 @@ function draw_level_select()
   draw_numbers()
   draw_level_name()
 
-  if get_level_complete(level_id) then
+  if is_level_locked(level_id) then
+    draw_level_locked()
+  elseif get_level_complete(level_id) then
     draw_level_complete()
   end
 
@@ -1273,6 +1279,13 @@ end
 function draw_level_name()
   print_border("level "..tostr(level_id), 4, 4, shadow_box_text_col, shadow_box_border)
   print_border(board.diff, screen_width - #board.diff*char_width - 3, 4, shadow_box_text_col, shadow_box_border)
+end
+
+-- draw that the level is locked
+function draw_level_locked()
+  local text = "locked"
+
+  print_border(text, flr((screen_width - #text*char_width) / 2), 4, shadow_box_text_col, shadow_box_border)
 end
 
 -- draw that the level is complete
@@ -1510,6 +1523,25 @@ end
 -- set whether the level has been completed
 function set_level_complete(level_id, is_complete)
   dset(level_id - 1, is_complete and 1 or 0)
+end
+
+-- return whether the level is locked
+function is_level_locked(level_id)
+  -- first three levels are always unlocked
+  if level_id <= 3 then return false end
+
+  local complete_count = 0
+
+  if get_level_complete(level_id - 1) then complete_count += 1 end
+  if get_level_complete(level_id - 2) then complete_count += 1 end
+  if get_level_complete(level_id - 3) then complete_count += 1 end
+
+  -- two of the three previous levels must be complete to unlock a level
+  if complete_count >= 2 then
+    return false
+  end
+
+  return true
 end
 
 -- mark the level as complete
