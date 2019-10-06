@@ -119,7 +119,7 @@ diff_hard = 3
 actor = {}
 errors = {}
 pointer = nil
-level_id = 1
+level_id = nil
 offset_x = nil
 offset_y = nil
 board = nil
@@ -185,7 +185,7 @@ levels = {
   "2ai24243144135437571u4227ae332f224343442663163a3645",
   "2eo1644443629311c26b0297f844221343h373k222612342b3c473021741328352132255s241335e91k893813",
   "2eo1416323b12659f3946325h43222f4223222e29214529352221211313223j124711543a242533462c5936214726a0296c",
-  "2eo343e13423932444b525b3b4c595c463b42341459314e4b59325723453439283e3k455643314322235512",
+  "2eo343e13423932444b525b3b4c595c463b42341459314e4b59325723453439293e3j455643314322235512",
   "2eo203462235a446h197a2m131b5532438h784723621l31455s5434672p6751717w49345226",
   "2eo7e35536h55136h25833l22231k42537k12838473322k33227k33322l73352h53157h4335",
   "2eo3cab351k33dk219816419g4a3c223q40291gc9353a29363126587156852p36526f",
@@ -295,6 +295,7 @@ function _init()
   palt(col_trans, true)
   pointer = make_pointer()
 
+  set_next_level()
   -- open_level()
   -- load_solution()
   -- check_solution()
@@ -412,7 +413,10 @@ function init_menu()
   menuitem(1, "check solution", start_solution_checker)
   menuitem(2, "level select", open_level_select)
 
-  if (debug == 1) menuitem(3, "show solution", load_solution)
+  if debug == 1 then
+    menuitem(3, "show solution", load_solution)
+    menuitem(4, "mark as complete", cheat_complete_level)
+  end
 end
 
 -- load the solution to the current level in
@@ -788,6 +792,7 @@ end
 -- read the level complete inputs and update the state
 function update_level_complete_state()
   if btnp(k_confirm) or btnp(k_cancel) then
+    set_next_level()
     open_level_select()
   end
 end
@@ -822,7 +827,11 @@ function update_level_select()
   end
 
   if btnp(k_confirm) then
-    open_level()
+    if is_level_locked(level_id) then
+      sfx(sfx_blocked, 0)
+    else
+      open_level()
+    end
   elseif btnp(k_cancel) then
     open_menu()
   end
@@ -928,7 +937,9 @@ function draw_level_select()
   draw_numbers()
   draw_level_name()
 
-  if get_level_complete(level_id) then
+  if is_level_locked(level_id) then
+    draw_level_locked()
+  elseif get_level_complete(level_id) then
     draw_level_complete()
   end
 
@@ -941,6 +952,13 @@ end
 function draw_level_name()
   print_border("level "..tostr(level_id), 4, 4, shadow_box_text_col, shadow_box_border)
   print_border(board.diff, screen_width - #board.diff*char_width - 3, 4, shadow_box_text_col, shadow_box_border)
+end
+
+-- draw that the level is locked
+function draw_level_locked()
+  local text = "locked"
+
+  print_border(text, flr((screen_width - #text*char_width) / 2), 4, shadow_box_text_col, shadow_box_border)
 end
 
 -- draw that the level is complete
@@ -1178,6 +1196,53 @@ end
 -- set whether the level has been completed
 function set_level_complete(level_id, is_complete)
   dset(level_id - 1, is_complete and 1 or 0)
+end
+
+-- return whether the level is locked
+function is_level_locked(level_id)
+  -- first three levels are always unlocked
+  if level_id <= 3 then return false end
+
+  local complete_count = 0
+
+  if get_level_complete(level_id - 1) then complete_count += 1 end
+  if get_level_complete(level_id - 2) then complete_count += 1 end
+  if get_level_complete(level_id - 3) then complete_count += 1 end
+
+  -- two of the three previous levels must be complete to unlock a level
+  if complete_count >= 2 then
+    return false
+  end
+
+  return false
+end
+
+-- mark the level as complete
+function cheat_complete_level()
+  board.correct = true
+  board.has_pools = false
+  board.errors = {}
+  board.checking = 0
+
+  pointer.show = 0
+  sfx(sfx_correct, 0)
+
+  set_level_complete(level_id, board.correct)
+end
+
+-- set the next level to the first unsolved level
+function set_next_level()
+  level_id = get_next_level()
+end
+
+-- return the id of the first unsolved level
+function get_next_level()
+  for i = 1, #levels do
+    if get_level_complete(i) == false then
+      return i
+    end
+  end
+  return #levels
 end
 
 -- helper functions --
